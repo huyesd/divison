@@ -1,5 +1,6 @@
 --[[
     Division UI Library – with auto‑unload, built‑in toggle keybind, keybinds & color picker
+    FIXED: ZIndex layering – tabs are now visible
 ]]
 
 local Division = {}
@@ -769,9 +770,10 @@ function Window.new(options)
         BorderSizePixel = 0,
     })
 
+    -- ⚠️ FIX: Background moved to ZIndex 0 (behind everything)
     self.Background = New("Frame", self.MainFrame, {
         Name = "Background",
-        ZIndex = 10,
+        ZIndex = 0,
         BackgroundColor3 = COLORS.Background,
         Size = UDim2.new(1, 0, 1, 0),
         AnchorPoint = Vector2.new(0.5, 0.5),
@@ -779,9 +781,10 @@ function Window.new(options)
         BorderSizePixel = 0,
     })
 
+    -- Top bar (ZIndex 1 so it sits above the background)
     self.TopBar = New("Frame", self.MainFrame, {
         Name = "Top",
-        ZIndex = 15,
+        ZIndex = 1,
         BackgroundColor3 = COLORS.TopBar,
         Size = UDim2.new(1, -2, 0, TAB_HEIGHT),
         Position = UDim2.new(0.5, 0, 0.03, 0),
@@ -806,11 +809,13 @@ function Window.new(options)
     })
     New("UITextSizeConstraint", self.TitleLabel)
 
+    -- ⚠️ FIX: TabsContainer gets ZIndex 1 (above background)
     self.TabsContainer = New("Frame", self.MainFrame, {
         Name = "TabsContainer",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 0, TAB_HEIGHT),
         Position = UDim2.new(0, 0, 0, TAB_HEIGHT + 3),
+        ZIndex = 1,
     })
     self.TabsLayout = New("UIListLayout", self.TabsContainer, {
         Padding = UDim.new(0, 2),
@@ -818,11 +823,13 @@ function Window.new(options)
         FillDirection = Enum.FillDirection.Horizontal,
     })
 
+    -- ⚠️ FIX: ContentContainer gets ZIndex 1 (above background)
     self.ContentContainer = New("Frame", self.MainFrame, {
         Name = "ContentContainer",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, -(TAB_HEIGHT * 2 + 6)),
         Position = UDim2.new(0, 0, TAB_HEIGHT * 2 + 4, 0),
+        ZIndex = 1,
     })
 
     self.Tabs = {}
@@ -953,7 +960,6 @@ function Window:Destroy()
     if self.KeybindConnection then self.KeybindConnection:Disconnect() end
     if self.ToggleConnection then self.ToggleConnection:Disconnect() end
     self.Gui:Destroy()
-    -- Clear global reference if this window is the one stored
     if _G.DivisionUI_Window == self then
         _G.DivisionUI_Window = nil
     end
@@ -963,18 +969,13 @@ end
 --  Library entry – with auto‑unload
 -- ─────────────────────────────────────────────────────────────
 function Division:CreateWindow(options)
-    -- Unload any existing UI window
     if _G.DivisionUI_Window then
         _G.DivisionUI_Window:Destroy()
         _G.DivisionUI_Window = nil
     end
 
-    -- Create the new window
     local window = Window.new(options)
-
-    -- Store it globally for future auto‑unload
     _G.DivisionUI_Window = window
-
     return window
 end
 
