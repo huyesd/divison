@@ -1,9 +1,8 @@
 --[[
-    Division UI Library – Original Design (from image)
-    - Dark theme, cyan accent, Roboto Mono font
-    - Color picker added
-    - ZIndex = 1000000 for overlay
-    - Matches the screenshot exactly
+    Division UI Library – Original Design (FIXED)
+    - Toggle row is TextButton (fixes MouseButton1Click error)
+    - All other elements as original design
+    - ZIndex = 1000000
 ]]
 
 local Division = {}
@@ -117,7 +116,6 @@ function Section.new(tab, name, side)
         Size = UDim2.new(1, 0, 0, 20),
         BorderSizePixel = 0,
     })
-    -- Subtle border (UIStroke)
     New("UIStroke", sectionFrame, { Color = COLORS.Border })
 
     local itemsContainer = New("Frame", sectionFrame, {
@@ -190,7 +188,7 @@ function Section:AddLabel(text)
     return label
 end
 
--- ─── Toggle (original square) ──────────────────────────
+-- ─── Toggle (FIXED: uses TextButton) ──────────────────
 function Section:AddToggle(options)
     options = options or {}
     local text = options.Text or "Toggle"
@@ -200,6 +198,7 @@ function Section:AddToggle(options)
     self._elementIndex = self._elementIndex + 1
     local z = 1000000 - self._elementIndex
 
+    -- ✅ Row is a TextButton to get MouseButton1Click
     local row = New("TextButton", self.ItemsContainer, {
         Name = "Toggle",
         BackgroundTransparency = 1,
@@ -244,6 +243,7 @@ function Section:AddToggle(options)
         callback(state)
     end
 
+    -- ✅ This now works because row is a TextButton
     row.MouseButton1Click:Connect(function()
         setState(not state)
     end)
@@ -254,7 +254,7 @@ function Section:AddToggle(options)
     }
 end
 
--- ─── Slider (original) ──────────────────────────────────
+-- ─── Slider ──────────────────────────────────────────────
 function Section:AddSlider(options)
     options = options or {}
     local text = options.Text or "Slider"
@@ -350,7 +350,7 @@ function Section:AddSlider(options)
     }
 end
 
--- ─── Dropdown (original) ──────────────────────────────
+-- ─── Dropdown ──────────────────────────────────────────────
 function Section:AddDropdown(options)
     options = options or {}
     local text = options.Text or ""
@@ -728,7 +728,6 @@ function Section:AddColorPicker(options)
         BorderSizePixel = 1,
     })
 
-    -- Close overlay
     local closeOverlay = New("TextButton", popup, {
         Name = "CloseOverlay",
         BackgroundTransparency = 1,
@@ -746,7 +745,6 @@ function Section:AddColorPicker(options)
         end
     end
 
-    -- Picker
     local pickerSquare = New("ImageLabel", popup, {
         Name = "PickerSquare",
         Image = "rbxassetid://4155187649",
@@ -907,7 +905,7 @@ function Section:AddColorPicker(options)
 end
 
 -- ─────────────────────────────────────────────────────────────
---  Window class (original layout, high ZIndex)
+--  Window class
 -- ─────────────────────────────────────────────────────────────
 local Window = {}
 Window.__index = Window
@@ -932,7 +930,6 @@ function Window.new(options)
         IgnoreGuiInset = true,
     })
 
-    -- Watermark (top-left)
     self.WatermarkLabel = New("TextLabel", self.Gui, {
         Name = "Watermark",
         BackgroundTransparency = 1,
@@ -949,7 +946,6 @@ function Window.new(options)
         ZIndex = 1000000,
     })
 
-    -- Main window frame
     self.MainFrame = New("Frame", self.Gui, {
         Name = "Main",
         BackgroundTransparency = 1,
@@ -959,7 +955,6 @@ function Window.new(options)
         BorderSizePixel = 0,
     })
 
-    -- Background
     self.Background = New("Frame", self.MainFrame, {
         Name = "Background",
         ZIndex = 999999,
@@ -971,7 +966,6 @@ function Window.new(options)
         BackgroundTransparency = 1,
     })
 
-    -- Top bar
     self.TopBar = New("Frame", self.MainFrame, {
         Name = "Top",
         ZIndex = 1000000,
@@ -1002,7 +996,6 @@ function Window.new(options)
     })
     New("UITextSizeConstraint", self.TitleLabel)
 
-    -- Tabs container (centered)
     self.TabsContainer = New("Frame", self.MainFrame, {
         Name = "TabsContainer",
         BackgroundTransparency = 1,
@@ -1018,7 +1011,6 @@ function Window.new(options)
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
     })
 
-    -- Content container
     self.ContentContainer = New("Frame", self.MainFrame, {
         Name = "ContentContainer",
         BackgroundTransparency = 1,
