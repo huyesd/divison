@@ -1,8 +1,5 @@
 --[[
-    Division UI Library – Original Design (FIXED)
-    - Toggle row is TextButton (fixes MouseButton1Click error)
-    - All other elements as original design
-    - ZIndex = 1000000
+    Division UI Library – v2.1 FIXED (Toggle uses TextButton)
 ]]
 
 local Division = {}
@@ -13,7 +10,7 @@ local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
 
--- ─── Original Colors ──────────────────────────────────────
+-- ─── Colors ──────────────────────────────────────────────
 local COLORS = {
     Background = Color3.fromRGB(13, 13, 13),
     TopBar = Color3.fromRGB(13, 13, 13),
@@ -24,7 +21,6 @@ local COLORS = {
     ToggleOff = Color3.fromRGB(31, 31, 31),
     ToggleOn = Color3.fromRGB(55, 225, 237),
     LabelColor = Color3.fromRGB(150, 150, 150),
-    DropdownBg = Color3.fromRGB(31, 31, 31),
 }
 
 local FONTS = {
@@ -39,7 +35,7 @@ local ITEM_HEIGHT = 8
 local LABEL_HEIGHT = 10
 local BUTTON_HEIGHT = 14
 
--- ─── Key display names ──────────────────────────────────
+-- ─── Key display ──────────────────────────────────────────
 local KEY_DISPLAY_NAMES = {
     RightShift = "RightShift",
     LeftShift = "LeftShift",
@@ -52,7 +48,6 @@ local KEY_DISPLAY_NAMES = {
     X1 = "X1",
     X2 = "X2",
 }
-
 local function getKeyDisplayName(key) return KEY_DISPLAY_NAMES[key] or key end
 
 -- ─── Utility ──────────────────────────────────────────────
@@ -79,7 +74,6 @@ local function Color3ToHex(c)
     )
 end
 
--- ─── Tween helpers ──────────────────────────────────────
 local function tweenProperty(obj, prop, target, duration)
     duration = duration or 0.15
     local tween = TweenService:Create(obj, TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { [prop] = target })
@@ -87,7 +81,6 @@ local function tweenProperty(obj, prop, target, duration)
     return tween
 end
 
--- ─── Key parsing ──────────────────────────────────────
 local function parseKey(str)
     if str == "Mouse1" then return Enum.UserInputType.MouseButton1, nil
     elseif str == "Mouse2" then return Enum.UserInputType.MouseButton2, nil
@@ -102,7 +95,7 @@ local function parseKey(str)
     end
 end
 
--- ─── Section class ──────────────────────────────────────
+-- ─── Section ──────────────────────────────────────────────
 local Section = {}
 Section.__index = Section
 
@@ -166,11 +159,10 @@ function Section.new(tab, name, side)
     return selfObj
 end
 
--- ─── Label ──────────────────────────────────────────────
+-- ─── AddLabel ─────────────────────────────────────────────
 function Section:AddLabel(text)
     self._elementIndex = self._elementIndex + 1
     local z = 1000000 - self._elementIndex
-
     local label = New("TextLabel", self.ItemsContainer, {
         Name = "Label",
         BackgroundTransparency = 1,
@@ -188,7 +180,7 @@ function Section:AddLabel(text)
     return label
 end
 
--- ─── Toggle (FIXED: uses TextButton) ──────────────────
+-- ─── AddToggle (FIXED: uses TextButton) ──────────────────
 function Section:AddToggle(options)
     options = options or {}
     local text = options.Text or "Toggle"
@@ -198,7 +190,7 @@ function Section:AddToggle(options)
     self._elementIndex = self._elementIndex + 1
     local z = 1000000 - self._elementIndex
 
-    -- ✅ Row is a TextButton to get MouseButton1Click
+    -- ✅ row is a TextButton so MouseButton1Click works
     local row = New("TextButton", self.ItemsContainer, {
         Name = "Toggle",
         BackgroundTransparency = 1,
@@ -243,7 +235,6 @@ function Section:AddToggle(options)
         callback(state)
     end
 
-    -- ✅ This now works because row is a TextButton
     row.MouseButton1Click:Connect(function()
         setState(not state)
     end)
@@ -254,7 +245,7 @@ function Section:AddToggle(options)
     }
 end
 
--- ─── Slider ──────────────────────────────────────────────
+-- ─── AddSlider ────────────────────────────────────────────
 function Section:AddSlider(options)
     options = options or {}
     local text = options.Text or "Slider"
@@ -350,7 +341,7 @@ function Section:AddSlider(options)
     }
 end
 
--- ─── Dropdown ──────────────────────────────────────────────
+-- ─── AddDropdown ──────────────────────────────────────────
 function Section:AddDropdown(options)
     options = options or {}
     local text = options.Text or ""
@@ -479,7 +470,7 @@ function Section:AddDropdown(options)
     }
 end
 
--- ─── Keybind ──────────────────────────────────────────────
+-- ─── AddKeybind ────────────────────────────────────────────
 function Section:AddKeybind(options)
     options = options or {}
     local text = options.Text or "Keybind"
@@ -513,7 +504,6 @@ function Section:AddKeybind(options)
         ZIndex = z,
     })
 
-    -- Mode dropdown
     local modeDropdown = self:AddDropdown({
         Text = "",
         Values = {"Toggle", "Hold", "Always"},
@@ -527,7 +517,6 @@ function Section:AddKeybind(options)
     modeFrame.AnchorPoint = Vector2.new(0, 0.5)
     modeFrame.ZIndex = z
 
-    -- Key button
     local keyButton = New("TextButton", row, {
         Name = "KeyButton",
         BackgroundTransparency = 1,
@@ -619,7 +608,7 @@ function Section:AddKeybind(options)
     }
 end
 
--- ─── Button ──────────────────────────────────────────────
+-- ─── AddButton ────────────────────────────────────────────
 function Section:AddButton(options)
     options = options or {}
     local text = options.Text or "Button"
@@ -669,7 +658,7 @@ function Section:AddButton(options)
     }
 end
 
--- ─── Color Picker ──────────────────────────────────────────
+-- ─── AddColorPicker ───────────────────────────────────────
 function Section:AddColorPicker(options)
     options = options or {}
     local text = options.Text or "Color"
@@ -715,7 +704,6 @@ function Section:AddColorPicker(options)
         ZIndex = z,
     })
 
-    -- Popup
     local popup = New("Frame", self.Tab.Window.Gui, {
         Name = "ColorPickerPopup",
         Visible = false,
@@ -1022,7 +1010,7 @@ function Window.new(options)
     self.Tabs = {}
     self.ActiveTab = nil
 
-    -- Smooth drag
+    -- Drag
     local dragData = { active = false, startMouse = nil, startPos = nil, connection = nil }
 
     local function updateDrag()
@@ -1129,7 +1117,7 @@ function Window.new(options)
     return self
 end
 
--- ─── Manual Settings tab ──────────────────────────────
+-- ─── CreateSettingsTab ────────────────────────────────────
 function Window:CreateSettingsTab()
     local settingsTab = self:CreateTab("Settings", false)
 
@@ -1156,7 +1144,7 @@ function Window:CreateSettingsTab()
     return settingsTab
 end
 
--- ─── Tween methods ──────────────────────────────────────
+-- ─── Fade methods ────────────────────────────────────────
 function Window:FadeIn()
     if not self.Gui.Enabled then return end
     local tweenInfo = TweenInfo.new(self.MenuFadeTime, Enum.EasingStyle.Linear)
