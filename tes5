@@ -1,5 +1,5 @@
 --[[
-    Division UI Library – with auto‑unload, built‑in toggle keybind, keybinds, color picker & labels
+    Division UI Library – draggable, centered tabs, proper section alignment
 ]]
 
 local Division = {}
@@ -74,7 +74,7 @@ function Section.new(tab, name, side)
     local sectionFrame = New("Frame", panel, {
         Name = name,
         BackgroundTransparency = 1,
-        Size = UDim2.new(0.99, 0, 1, 0),
+        Size = UDim2.new(1, 0, 1, 0),  -- fill the panel
         BorderSizePixel = 0,
     })
     New("UIStroke", sectionFrame, { Color = COLORS.Border })
@@ -82,14 +82,14 @@ function Section.new(tab, name, side)
     local itemsContainer = New("Frame", sectionFrame, {
         Name = "Items",
         BackgroundTransparency = 1,
-        Size = UDim2.new(0.96, 0, 0.96, 0),
+        Size = UDim2.new(1, -10, 1, -8),
         Position = UDim2.new(0.5, 0, 0.5, 0),
         AnchorPoint = Vector2.new(0.5, 0.5),
         BorderSizePixel = 0,
     })
     local itemsLayout = New("UIListLayout", itemsContainer, {
-        HorizontalAlignment = Enum.HorizontalAlignment.Center,
-        Padding = UDim.new(0, 6),
+        HorizontalAlignment = Enum.HorizontalAlignment.Left,  -- left‑align items
+        Padding = UDim.new(0, 4),
         SortOrder = Enum.SortOrder.LayoutOrder,
     })
 
@@ -112,7 +112,7 @@ function Section.new(tab, name, side)
             end
         end
         totalHeight = totalHeight + itemsLayout.Padding.Offset * 2
-        sectionFrame.Size = UDim2.new(0.99, 0, 0, totalHeight + 10)
+        sectionFrame.Size = UDim2.new(1, 0, 0, totalHeight + 12)
     end
 
     itemsContainer.ChildAdded:Connect(updateSize)
@@ -131,7 +131,7 @@ function Section:AddLabel(text)
         TextScaled = true,
         TextSize = 12,
         TextXAlignment = Enum.TextXAlignment.Left,
-        Size = UDim2.new(0, 260, 0, LABEL_HEIGHT),
+        Size = UDim2.new(1, 0, 0, LABEL_HEIGHT),
         BorderSizePixel = 0,
         LayoutOrder = #self.ItemsContainer:GetChildren() + 1,
     })
@@ -148,7 +148,7 @@ function Section:AddToggle(options)
     local row = New("TextButton", self.ItemsContainer, {
         Name = "Toggle",
         BackgroundTransparency = 1,
-        Size = UDim2.new(0, 260, 0, ITEM_HEIGHT),
+        Size = UDim2.new(1, 0, 0, ITEM_HEIGHT),
         BorderSizePixel = 0,
         Text = "",
         AutoButtonColor = false,
@@ -216,7 +216,7 @@ function Section:AddSlider(options)
     local row = New("Frame", self.ItemsContainer, {
         Name = "Slider",
         BackgroundTransparency = 1,
-        Size = UDim2.new(0, 260, 0, 16),
+        Size = UDim2.new(1, 0, 0, 16),
         BorderSizePixel = 0,
         LayoutOrder = #self.ItemsContainer:GetChildren() + 1,
     })
@@ -230,8 +230,8 @@ function Section:AddSlider(options)
         TextScaled = true,
         TextSize = 14,
         TextXAlignment = Enum.TextXAlignment.Left,
-        Size = UDim2.new(0, 200, 0, 9),
-        Position = UDim2.new(-0.005, 0, -0.125, 0),
+        Size = UDim2.new(1, 0, 0, 9),
+        Position = UDim2.new(0, 0, -0.125, 0),
         LayoutOrder = 1,
         BorderSizePixel = 0,
     })
@@ -240,7 +240,7 @@ function Section:AddSlider(options)
         Name = "SliderOuter",
         BackgroundColor3 = COLORS.ToggleOff,
         ClipsDescendants = true,
-        Size = UDim2.new(0, 260, 0, 6),
+        Size = UDim2.new(1, 0, 0, 6),
         Position = UDim2.new(0, 0, 0.57143, 0),
         LayoutOrder = 2,
         BorderSizePixel = 0,
@@ -310,7 +310,7 @@ function Section:AddDropdown(options)
     local row = New("Frame", self.ItemsContainer, {
         Name = "Dropdown",
         BackgroundTransparency = 1,
-        Size = UDim2.new(0, 260, 0, 14),
+        Size = UDim2.new(1, 0, 0, 14),
         BorderSizePixel = 0,
         LayoutOrder = #self.ItemsContainer:GetChildren() + 1,
     })
@@ -325,7 +325,7 @@ function Section:AddDropdown(options)
         TextSize = 12,
         TextXAlignment = Enum.TextXAlignment.Left,
         Size = UDim2.new(0, 120, 0, 9),
-        Position = UDim2.new(-0.005, 0, -0.1, 0),
+        Position = UDim2.new(0, 0, -0.1, 0),
         LayoutOrder = 1,
         BorderSizePixel = 0,
     })
@@ -432,7 +432,7 @@ function Section:AddKeybind(options)
     local row = New("TextButton", self.ItemsContainer, {
         Name = "Keybind",
         BackgroundTransparency = 1,
-        Size = UDim2.new(0, 260, 0, ITEM_HEIGHT),
+        Size = UDim2.new(1, 0, 0, ITEM_HEIGHT),
         BorderSizePixel = 0,
         Text = "",
         AutoButtonColor = false,
@@ -535,7 +535,7 @@ function Section:AddColorPicker(options)
     local row = New("TextButton", self.ItemsContainer, {
         Name = "ColorPicker",
         BackgroundTransparency = 1,
-        Size = UDim2.new(0, 260, 0, 16),
+        Size = UDim2.new(1, 0, 0, 16),
         BorderSizePixel = 0,
         Text = "",
         AutoButtonColor = false,
@@ -760,7 +760,7 @@ function Section:AddColorPicker(options)
 end
 
 -- ─────────────────────────────────────────────────────────────
---  Window class
+--  Window class – now draggable and with centered tabs
 -- ─────────────────────────────────────────────────────────────
 local Window = {}
 Window.__index = Window
@@ -803,6 +803,7 @@ function Window.new(options)
         BorderSizePixel = 0,
     })
 
+    -- Top bar (draggable)
     self.TopBar = New("Frame", self.MainFrame, {
         Name = "Top",
         ZIndex = 1,
@@ -830,19 +831,24 @@ function Window.new(options)
     })
     New("UITextSizeConstraint", self.TitleLabel)
 
+    -- Tabs container (centered)
     self.TabsContainer = New("Frame", self.MainFrame, {
         Name = "TabsContainer",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 0, TAB_HEIGHT),
-        Position = UDim2.new(0, 0, 0, TAB_HEIGHT + 3),
+        Position = UDim2.new(0.5, 0, 0, TAB_HEIGHT + 3),
+        AnchorPoint = Vector2.new(0.5, 0),
         ZIndex = 1,
     })
-    self.TabsLayout = New("UIListLayout", self.TabsContainer, {
+    -- A UIListLayout inside to center the tabs
+    local tabsLayout = New("UIListLayout", self.TabsContainer, {
         Padding = UDim.new(0, 2),
         SortOrder = Enum.SortOrder.LayoutOrder,
         FillDirection = Enum.FillDirection.Horizontal,
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,  -- center the tabs
     })
 
+    -- Content container
     self.ContentContainer = New("Frame", self.MainFrame, {
         Name = "ContentContainer",
         BackgroundTransparency = 1,
@@ -854,6 +860,51 @@ function Window.new(options)
     self.Tabs = {}
     self.ActiveTab = nil
 
+    -- ─── Dragging logic ───
+    local dragging = false
+    local dragInput, dragStart, startPos
+
+    local function updatePosition(input)
+        local delta = input.Position - dragStart
+        self.MainFrame.Position = UDim2.new(
+            0.5, startPos.X.Offset + delta.X,
+            0.5, startPos.Y.Offset + delta.Y
+        )
+    end
+
+    self.TopBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = self.MainFrame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    self.TopBar.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            updatePosition(input)
+        end
+    end)
+
+    -- Also listen globally for mouse movement to keep dragging smooth even if mouse leaves topbar
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            updatePosition(input)
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+
+    -- ─── Global keybind listener ───
     self.KeybindConnection = UserInputService.InputBegan:Connect(function(input, processed)
         if processed then return end
         if input.UserInputType == Enum.UserInputType.Keyboard then
@@ -864,6 +915,7 @@ function Window.new(options)
         end
     end)
 
+    -- Built‑in toggle keybind
     if self.ToggleKey then
         self.ToggleConnection = UserInputService.InputBegan:Connect(function(input, processed)
             if processed then return end
@@ -911,7 +963,7 @@ function Window:CreateTab(name, isDefault)
     local leftPanel = New("Frame", content, {
         Name = "Left",
         BackgroundTransparency = 1,
-        Size = UDim2.new(0.5, 0, 1, 0),
+        Size = UDim2.new(0.5, -2, 1, 0),
     })
     local leftLayout = New("UIListLayout", leftPanel, {
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
@@ -922,7 +974,7 @@ function Window:CreateTab(name, isDefault)
     local rightPanel = New("Frame", content, {
         Name = "Right",
         BackgroundTransparency = 1,
-        Size = UDim2.new(0.5, 0, 1, 0),
+        Size = UDim2.new(0.5, -2, 1, 0),
         Position = UDim2.new(0.5, 0, 0, 0),
     })
     local rightLayout = New("UIListLayout", rightPanel, {
