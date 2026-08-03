@@ -1,9 +1,9 @@
 --[[
-    Division UI Library – Full Settings
-    - Configs (create, delete, load, save, refresh)
-    - Theming (all colors)
-    - Other (unload, ui bind, animation options)
-    - All previous features (keybinds, color picker, etc.)
+    Division UI Library – Full Settings (FIXED)
+    - Flags stored in Library.Flags
+    - Config name textbox works
+    - Consistent text scaling (TextScaled = true)
+    - All features included
 ]]
 
 local Division = {}
@@ -63,6 +63,10 @@ Division.Theme = {
     Hovered = COLORS.Hovered,
 }
 
+-- ─── Flags (global) ──────────────────────────────────────────
+Division.Flags = {}
+Division.SetFlags = {}
+
 -- ─── Theming system ──────────────────────────────────────────
 local ThemingStuff = {}
 local ThemeMap = {}
@@ -98,12 +102,9 @@ local ConfigsFolder = "Division/Configs/"
 if not isfolder("Division") then makefolder("Division") end
 if not isfolder(ConfigsFolder) then makefolder(ConfigsFolder) end
 
-local Flags = {}
-local SetFlags = {}
-
 function Division.GetConfig()
     local config = {}
-    for key, value in pairs(Flags) do
+    for key, value in pairs(Division.Flags) do
         config[key] = value
     end
     return HttpService:JSONEncode(config)
@@ -112,8 +113,8 @@ end
 function Division.LoadConfig(json)
     local data = HttpService:JSONDecode(json)
     for key, value in pairs(data) do
-        if SetFlags[key] then
-            SetFlags[key](value)
+        if Division.SetFlags[key] then
+            Division.SetFlags[key](value)
         end
     end
 end
@@ -1010,6 +1011,72 @@ function Section:AddColorPicker(options)
     }
 end
 
+-- ─── AddTextbox (for config name) ──────────────────────────
+function Section:AddTextbox(options)
+    options = options or {}
+    local placeholder = options.Placeholder or ""
+    local flag = options.Flag or ""
+    local default = options.Default or ""
+    local callback = options.Callback or function() end
+
+    self._elementIndex = self._elementIndex + 1
+    local z = 1000000 - self._elementIndex
+
+    local row = New("Frame", self.ItemsContainer, {
+        Name = "Textbox",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 18),
+        BorderSizePixel = 0,
+        LayoutOrder = #self.ItemsContainer:GetChildren() + 1,
+        ZIndex = z,
+    })
+
+    local bg = New("Frame", row, {
+        Name = "Background",
+        BackgroundColor3 = Division.Theme.Inline,
+        Size = UDim2.new(1, 0, 1, 0),
+        BorderSizePixel = 0,
+        ZIndex = z,
+    })
+    Division.AddToTheme(bg, { BackgroundColor3 = "Inline" })
+
+    local input = New("TextBox", bg, {
+        Name = "Input",
+        BackgroundTransparency = 1,
+        Text = default,
+        TextColor3 = Division.Theme.Text,
+        PlaceholderColor3 = Division.Theme.InactiveText,
+        PlaceholderText = placeholder,
+        FontFace = FONTS.Default,
+        TextScaled = true,
+        TextSize = 14,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Size = UDim2.new(1, -10, 1, 0),
+        Position = UDim2.new(0, 6, 0, 0),
+        BorderSizePixel = 0,
+        ClearTextOnFocus = false,
+        ZIndex = z + 1,
+    })
+    Division.AddToTheme(input, { TextColor3 = "Text", PlaceholderColor3 = "InactiveText" })
+
+    local value = default
+    input:GetPropertyChangedSignal("Text"):Connect(function()
+        value = input.Text
+        if flag then
+            Division.Flags[flag] = value
+            if Division.SetFlags[flag] then
+                Division.SetFlags[flag](value)
+            end
+        end
+        callback(value)
+    end)
+
+    return {
+        Set = function(v) input.Text = v end,
+        Get = function() return input.Text end,
+    }
+end
+
 -- ─────────────────────────────────────────────────────────────
 --  Window class
 -- ─────────────────────────────────────────────────────────────
@@ -1263,7 +1330,7 @@ function Window:CreateFullSettingsTab()
     configSection:AddButton({
         Text = "Create",
         Callback = function()
-            local name = tostring(flags["config_name"])
+            local name = Division.Flags["config_name"]
             if name and name ~= "" then
                 writefile(ConfigsFolder .. name .. ".json", Division.GetConfig())
                 configDropdown:Set(Division.GetConfigsList())
@@ -1309,11 +1376,9 @@ function Window:CreateFullSettingsTab()
             configDropdown:Set(Division.GetConfigsList())
         end
     })
-    -- Config name textbox (we'll add a simple textbox)
-    configSection:AddLabel("Config name:")
-    local configNameBox = configSection:AddTextbox({
-        Text = "",
-        Placeholder = "name",
+    -- Config name textbox
+    configSection:AddTextbox({
+        Placeholder = "config name",
         Flag = "config_name",
     })
 
@@ -1374,70 +1439,6 @@ function Window:CreateFullSettingsTab()
     })
 
     return settingsTab
-end
-
--- ─── AddTextbox (needed for config name) ──────────────────
-function Section:AddTextbox(options)
-    options = options or {}
-    local text = options.Text or ""
-    local placeholder = options.Placeholder or ""
-    local flag = options.Flag or ""
-    local default = options.Default or ""
-    local callback = options.Callback or function() end
-
-    self._elementIndex = self._elementIndex + 1
-    local z = 1000000 - self._elementIndex
-
-    local row = New("Frame", self.ItemsContainer, {
-        Name = "Textbox",
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 18),
-        BorderSizePixel = 0,
-        LayoutOrder = #self.ItemsContainer:GetChildren() + 1,
-        ZIndex = z,
-    })
-
-    local bg = New("Frame", row, {
-        Name = "Background",
-        BackgroundColor3 = Division.Theme.Inline,
-        Size = UDim2.new(1, 0, 1, 0),
-        BorderSizePixel = 0,
-        ZIndex = z,
-    })
-    Division.AddToTheme(bg, { BackgroundColor3 = "Inline" })
-
-    local input = New("TextBox", bg, {
-        Name = "Input",
-        BackgroundTransparency = 1,
-        Text = default,
-        TextColor3 = Division.Theme.Text,
-        PlaceholderColor3 = Division.Theme.InactiveText,
-        PlaceholderText = placeholder,
-        FontFace = FONTS.Default,
-        TextScaled = true,
-        TextSize = 14,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Size = UDim2.new(1, -10, 1, 0),
-        Position = UDim2.new(0, 6, 0, 0),
-        BorderSizePixel = 0,
-        ClearTextOnFocus = false,
-        ZIndex = z + 1,
-    })
-    Division.AddToTheme(input, { TextColor3 = "Text", PlaceholderColor3 = "InactiveText" })
-
-    local value = default
-    input:GetPropertyChangedSignal("Text"):Connect(function()
-        value = input.Text
-        if flag and SetFlags then
-            Flags[flag] = value
-        end
-        callback(value)
-    end)
-
-    return {
-        Set = function(v) input.Text = v end,
-        Get = function() return input.Text end,
-    }
 end
 
 -- ─── Fade methods ────────────────────────────────────────
