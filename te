@@ -1,5 +1,6 @@
 --[[
     Division UI Library – Ultimate
+    - Key display names formatted (e.g., "Right Shift")
     - Highest ZIndex to overlay Roblox UI
     - Top element in each section has highest ZIndex
     - Keybinds: transparent background, hover text only
@@ -40,6 +41,29 @@ local TAB_HEIGHT = 19
 local ITEM_HEIGHT = 8
 local LABEL_HEIGHT = 10
 local BUTTON_HEIGHT = 14
+
+-- ─── Key display name mapping ──────────────────────────
+local KEY_DISPLAY_NAMES = {
+    RightShift = "Right Shift",
+    LeftShift = "Left Shift",
+    RightControl = "Right Ctrl",
+    LeftControl = "Left Ctrl",
+    RightAlt = "Right Alt",
+    LeftAlt = "Left Alt",
+    RightCommand = "Right Cmd",
+    LeftCommand = "Left Cmd",
+    RightMouse = "Right Mouse", -- if you want to display it
+    LeftMouse = "Left Mouse",
+    MiddleMouse = "Middle Mouse",
+    Mouse2 = "Mouse2",
+    Mouse3 = "Mouse3",
+    X1 = "X1",
+    X2 = "X2",
+}
+
+local function getKeyDisplayName(key)
+    return KEY_DISPLAY_NAMES[key] or key
+end
 
 -- ─── Utility ──────────────────────────────────────────────
 local function New(className, parent, properties)
@@ -485,7 +509,7 @@ function Section:AddDropdown(options)
     }
 end
 
--- ─── Keybind (transparent background, hover text only) ──
+-- ─── Keybind (with display names, transparent bg, hover text only) ──
 function Section:AddKeybind(options)
     options = options or {}
     local text = options.Text or "Keybind"
@@ -539,8 +563,8 @@ function Section:AddKeybind(options)
     -- Key button – transparent background, only text changes on hover
     local keyButton = New("TextButton", row, {
         Name = "KeyButton",
-        BackgroundTransparency = 1,          -- fully transparent
-        Text = defaultKey,
+        BackgroundTransparency = 1,
+        Text = getKeyDisplayName(defaultKey),  -- formatted display name
         TextColor3 = COLORS.Text,
         FontFace = FONTS.Bold,
         TextScaled = true,
@@ -582,7 +606,7 @@ function Section:AddKeybind(options)
 
     local function setKey(keyDisplay)
         currentKey = keyDisplay
-        keyButton.Text = keyDisplay
+        keyButton.Text = getKeyDisplayName(keyDisplay)  -- formatted
         updateKeyButtonWidth()
         for _, binding in ipairs(window.Keybinds) do
             if binding.row == row then
