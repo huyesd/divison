@@ -1,6 +1,7 @@
 --[[
-    Division UI Library – v2.2
+    Division UI Library – v2.3
     - MainFrame position: {0.5, 0}, {0.55, 0}, anchor 0.5,0.5
+    - ContentContainer position: {0.5, 0}, {0.55, 0}, anchor 0.5,0.5
     - No UIStroke on sections
 ]]
 
@@ -935,7 +936,7 @@ function Window.new(options)
         ZIndex = 1000000,
     })
 
-    -- ✅ MainFrame positioned as requested: {0.5, 0}, {0.55, 0}, anchor (0.5, 0.5)
+    -- MainFrame positioned at {0.5,0}, {0.55,0} anchor (0.5,0.5)
     self.MainFrame = New("Frame", self.Gui, {
         Name = "Main",
         BackgroundTransparency = 1,
@@ -1001,19 +1002,20 @@ function Window.new(options)
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
     })
 
-    -- ContentContainer remains relative to MainFrame, unchanged
+    -- ContentContainer positioned exactly as requested: {0.5,0}, {0.55,0} anchor (0.5,0.5)
     self.ContentContainer = New("Frame", self.MainFrame, {
         Name = "ContentContainer",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, -(TAB_HEIGHT * 2 + 6)),
-        Position = UDim2.new(0, 0, TAB_HEIGHT * 2 + 4, 0),
+        Position = UDim2.new(0.5, 0, 0.55, 0),      -- <-- new position
+        AnchorPoint = Vector2.new(0.5, 0.5),       -- <-- new anchor
         ZIndex = 1000000,
     })
 
     self.Tabs = {}
     self.ActiveTab = nil
 
-    -- Drag (adjusts MainFrame position relative to screen)
+    -- Drag (adjusts MainFrame position)
     local dragData = { active = false, startMouse = nil, startPos = nil, connection = nil }
 
     local function updateDrag()
@@ -1022,7 +1024,7 @@ function Window.new(options)
         local delta = mousePos - dragData.startMouse
         self.MainFrame.Position = UDim2.new(
             0.5, dragData.startPos.X.Offset + delta.X,
-            0.55, dragData.startPos.Y.Offset + delta.Y  -- keep Y scale at 0.55
+            0.55, dragData.startPos.Y.Offset + delta.Y
         )
     end
 
