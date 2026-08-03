@@ -1,11 +1,5 @@
 --[[
-    Division UI Library – Final
-    - Smooth drag (RunService.Heartbeat)
-    - CoreGui parent
-    - Auto‑unload on re‑inject
-    - Watermark (top‑left of screen)
-    - Dropdown fixed (no extra text)
-    - Tween fade in/out
+    Division UI Library – Final (dropdown ZIndex fixed)
 ]]
 
 local Division = {}
@@ -303,7 +297,7 @@ function Section:AddSlider(options)
     }
 end
 
--- ──────── Dropdown (FIXED) ────────
+-- ──────── Dropdown (FIXED ZIndex) ──────────────────────
 function Section:AddDropdown(options)
     options = options or {}
     local text = options.Text or ""
@@ -336,6 +330,7 @@ function Section:AddDropdown(options)
         })
     end
 
+    -- Dropdown frame – raise ZIndex to 10 so it stays above other elements
     local dropdownFrame = New("Frame", row, {
         Name = "DropdownFrame",
         BackgroundColor3 = COLORS.ToggleOff,
@@ -344,6 +339,8 @@ function Section:AddDropdown(options)
         AnchorPoint = Vector2.new(0, 0.5),
         LayoutOrder = 2,
         BorderSizePixel = 0,
+        ZIndex = 10,                    -- high ZIndex
+        ClipsDescendants = false,       -- allow items to expand outside
     })
     local dropdownText = New("TextLabel", dropdownFrame, {
         Name = "Text",
@@ -358,8 +355,10 @@ function Section:AddDropdown(options)
         Position = UDim2.new(0.48, 0, 0.5, 0),
         AnchorPoint = Vector2.new(0.5, 0.5),
         BorderSizePixel = 0,
+        ZIndex = 10,
     })
 
+    -- Items frame – high ZIndex as well
     local itemsFrame = New("ScrollingFrame", dropdownFrame, {
         Name = "ItemsFrame",
         Visible = false,
@@ -369,6 +368,8 @@ function Section:AddDropdown(options)
         Position = UDim2.new(0, 0, 0.97, 0),
         BorderSizePixel = 0,
         ScrollBarImageColor3 = Color3.new(0,0,0),
+        ZIndex = 10,
+        ClipsDescendants = false,
     })
     New("UIListLayout", itemsFrame, {
         HorizontalAlignment = Enum.HorizontalAlignment.Left,
@@ -407,6 +408,7 @@ function Section:AddDropdown(options)
             Size = UDim2.new(0.95, 0, 0, 12),
             BorderSizePixel = 0,
             AutoButtonColor = false,
+            ZIndex = 10,
         })
         item.MouseButton1Click:Connect(function()
             setSelected(val)
@@ -784,14 +786,12 @@ function Window.new(options)
     self.WatermarkText = options.Watermark or "Division 2.72 | NA | not connected | 75"
     self.ToggleKey = options.ToggleKey or Enum.KeyCode.RightShift
 
-    -- Parent to CoreGui
     self.Gui = New("ScreenGui", CoreGui, {
         Name = "DivisionUI",
         Enabled = true,
         ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
     })
 
-    -- Watermark (top-left, independent of window)
     self.WatermarkLabel = New("TextLabel", self.Gui, {
         Name = "Watermark",
         BackgroundTransparency = 1,
@@ -808,7 +808,6 @@ function Window.new(options)
         ZIndex = 10,
     })
 
-    -- Main frame
     self.MainFrame = New("Frame", self.Gui, {
         Name = "Main",
         BackgroundTransparency = 1,
@@ -818,7 +817,6 @@ function Window.new(options)
         BorderSizePixel = 0,
     })
 
-    -- Background (fade)
     self.Background = New("Frame", self.MainFrame, {
         Name = "Background",
         ZIndex = 0,
@@ -830,7 +828,6 @@ function Window.new(options)
         BackgroundTransparency = 1,
     })
 
-    -- Top bar (draggable)
     self.TopBar = New("Frame", self.MainFrame, {
         Name = "Top",
         ZIndex = 1,
@@ -860,7 +857,6 @@ function Window.new(options)
     })
     New("UITextSizeConstraint", self.TitleLabel)
 
-    -- Tabs container (centered)
     self.TabsContainer = New("Frame", self.MainFrame, {
         Name = "TabsContainer",
         BackgroundTransparency = 1,
@@ -876,7 +872,6 @@ function Window.new(options)
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
     })
 
-    -- Content container (starts at Y=43)
     self.ContentContainer = New("Frame", self.MainFrame, {
         Name = "ContentContainer",
         BackgroundTransparency = 1,
@@ -889,7 +884,7 @@ function Window.new(options)
     self.Tabs = {}
     self.ActiveTab = nil
 
-    -- ─── SMOOTHER DRAG ──────────────────────────────────
+    -- Smooth drag
     local dragData = { active = false, startMouse = nil, startPos = nil, connection = nil }
 
     local function updateDrag()
@@ -958,9 +953,8 @@ end
 function Window:FadeIn()
     if not self.Gui.Enabled then return end
     local tweenInfo = TweenInfo.new(self.MenuFadeTime or 0.2, Enum.EasingStyle.Linear)
-    local props = { BackgroundTransparency = 0 }
-    local bgTween = TweenService:Create(self.Background, tweenInfo, props)
-    local topTween = TweenService:Create(self.TopBar, tweenInfo, props)
+    local bgTween = TweenService:Create(self.Background, tweenInfo, { BackgroundTransparency = 0 })
+    local topTween = TweenService:Create(self.TopBar, tweenInfo, { BackgroundTransparency = 0 })
     local titleTween = TweenService:Create(self.TitleLabel, tweenInfo, { TextTransparency = 0 })
     bgTween:Play()
     topTween:Play()
@@ -970,9 +964,8 @@ end
 function Window:FadeOut()
     if not self.Gui.Enabled then return end
     local tweenInfo = TweenInfo.new(self.MenuFadeTime or 0.2, Enum.EasingStyle.Linear)
-    local props = { BackgroundTransparency = 1 }
-    local bgTween = TweenService:Create(self.Background, tweenInfo, props)
-    local topTween = TweenService:Create(self.TopBar, tweenInfo, props)
+    local bgTween = TweenService:Create(self.Background, tweenInfo, { BackgroundTransparency = 1 })
+    local topTween = TweenService:Create(self.TopBar, tweenInfo, { BackgroundTransparency = 1 })
     local titleTween = TweenService:Create(self.TitleLabel, tweenInfo, { TextTransparency = 1 })
     bgTween:Play()
     topTween:Play()
@@ -982,7 +975,7 @@ function Window:FadeOut()
 end
 
 function Window:ToggleVisibility()
-    if self.Gui.Enabled then self:FadeOut() else self.Gui.Enabled = true self:FadeIn() end
+    if self.Gui.Enabled then self:FadeOut() else self.Gui.Enabled = true; self:FadeIn() end
 end
 
 function Window:Show()
@@ -999,7 +992,6 @@ function Window:SetWatermark(text)
     self.WatermarkLabel.Text = text
 end
 
--- ─── CreateTab ──────────────────────────────────────────
 function Window:CreateTab(name, isDefault)
     local button = New("TextButton", self.TabsContainer, {
         Name = name,
