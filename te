@@ -1,8 +1,13 @@
 --[[
-    Division UI Library – v2.4
+    Division UI Library – Final
+    - All features included
     - Dropdown backgrounds transparent
-    - MainFrame: {0.5,0}, {0.55,0} anchor 0.5,0.5
-    - ContentContainer: {0.5,0}, {0.55,0} anchor 0.5,0.5
+    - ContentContainer: {0.5,0}, {0.55,0} anchor (0.5,0.5)
+    - Keybinds with mouse support & modes
+    - Color picker
+    - Watermark (top-left of screen)
+    - Auto‑unload, smooth drag, fade tween
+    - Settings tab with configs
 ]]
 
 local Division = {}
@@ -12,8 +17,9 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 
--- ─── Colors ──────────────────────────────────────────────
+-- ─── Constants ──────────────────────────────────────────────
 local COLORS = {
     Background = Color3.fromRGB(13, 13, 13),
     TopBar = Color3.fromRGB(13, 13, 13),
@@ -24,6 +30,7 @@ local COLORS = {
     ToggleOff = Color3.fromRGB(31, 31, 31),
     ToggleOn = Color3.fromRGB(55, 225, 237),
     LabelColor = Color3.fromRGB(150, 150, 150),
+    DropdownBg = Color3.fromRGB(31, 31, 31),
 }
 
 local FONTS = {
@@ -38,7 +45,7 @@ local ITEM_HEIGHT = 8
 local LABEL_HEIGHT = 10
 local BUTTON_HEIGHT = 14
 
--- ─── Key display ──────────────────────────────────────────
+-- ─── Key display names ──────────────────────────────────────
 local KEY_DISPLAY_NAMES = {
     RightShift = "RightShift",
     LeftShift = "LeftShift",
@@ -98,7 +105,7 @@ local function parseKey(str)
     end
 end
 
--- ─── Section ──────────────────────────────────────────────
+-- ─── Section class ──────────────────────────────────────────
 local Section = {}
 Section.__index = Section
 
@@ -112,6 +119,7 @@ function Section.new(tab, name, side)
         Size = UDim2.new(1, 0, 0, 20),
         BorderSizePixel = 0,
     })
+    -- No UIStroke – clean look
 
     local itemsContainer = New("Frame", sectionFrame, {
         Name = "Items",
@@ -161,7 +169,7 @@ function Section.new(tab, name, side)
     return selfObj
 end
 
--- ─── AddLabel ─────────────────────────────────────────────
+-- ─── AddLabel ──────────────────────────────────────────────
 function Section:AddLabel(text)
     self._elementIndex = self._elementIndex + 1
     local z = 1000000 - self._elementIndex
@@ -342,7 +350,7 @@ function Section:AddSlider(options)
     }
 end
 
--- ─── AddDropdown (transparent backgrounds) ────────────────
+-- ─── AddDropdown (transparent backgrounds) ───────────────
 function Section:AddDropdown(options)
     options = options or {}
     local text = options.Text or ""
@@ -382,7 +390,7 @@ function Section:AddDropdown(options)
     -- Dropdown frame: fully transparent
     local dropdownFrame = New("Frame", row, {
         Name = "DropdownFrame",
-        BackgroundTransparency = 1,                     -- <-- transparent
+        BackgroundTransparency = 1,
         Size = UDim2.new(0, 120, 0, 12),
         Position = UDim2.new(0, (text ~= "" and 110 or 0), 0.5, 0),
         AnchorPoint = Vector2.new(0, 0.5),
@@ -411,7 +419,7 @@ function Section:AddDropdown(options)
         Name = "ItemsFrame",
         Visible = false,
         Active = true,
-        BackgroundTransparency = 1,                     -- <-- transparent
+        BackgroundTransparency = 1,
         Size = UDim2.new(0, 120, 0, 30),
         Position = UDim2.new(0, 0, 0.97, 0),
         BorderSizePixel = 0,
@@ -442,7 +450,7 @@ function Section:AddDropdown(options)
             Name = "Item",
             Text = val,
             TextColor3 = (val == default) and COLORS.Accent or COLORS.DimText,
-            BackgroundTransparency = 1,                 -- items are transparent
+            BackgroundTransparency = 1,
             FontFace = FONTS.Default,
             TextScaled = true,
             TextSize = 12,
@@ -479,7 +487,7 @@ function Section:AddDropdown(options)
     }
 end
 
--- ─── AddKeybind ────────────────────────────────────────────
+-- ─── AddKeybind (with mouse support & modes) ──────────────
 function Section:AddKeybind(options)
     options = options or {}
     local text = options.Text or "Keybind"
@@ -513,6 +521,7 @@ function Section:AddKeybind(options)
         ZIndex = z,
     })
 
+    -- Mode dropdown
     local modeDropdown = self:AddDropdown({
         Text = "",
         Values = {"Toggle", "Hold", "Always"},
@@ -526,6 +535,7 @@ function Section:AddKeybind(options)
     modeFrame.AnchorPoint = Vector2.new(0, 0.5)
     modeFrame.ZIndex = z
 
+    -- Key button
     local keyButton = New("TextButton", row, {
         Name = "KeyButton",
         BackgroundTransparency = 1,
@@ -713,6 +723,7 @@ function Section:AddColorPicker(options)
         ZIndex = z,
     })
 
+    -- Popup
     local popup = New("Frame", self.Tab.Window.Gui, {
         Name = "ColorPickerPopup",
         Visible = false,
@@ -911,7 +922,7 @@ function Window.new(options)
     options = options or {}
     local self = setmetatable({}, Window)
 
-    self.Title = options.Title or "Division"
+    self.Title = options.Title or "division"
     self.Center = options.Center ~= false
     self.AutoShow = options.AutoShow ~= false
     self.TabPadding = options.TabPadding or 8
@@ -927,6 +938,7 @@ function Window.new(options)
         IgnoreGuiInset = true,
     })
 
+    -- Watermark (top-left of screen)
     self.WatermarkLabel = New("TextLabel", self.Gui, {
         Name = "Watermark",
         BackgroundTransparency = 1,
@@ -943,6 +955,7 @@ function Window.new(options)
         ZIndex = 1000000,
     })
 
+    -- Main window
     self.MainFrame = New("Frame", self.Gui, {
         Name = "Main",
         BackgroundTransparency = 1,
@@ -1008,6 +1021,7 @@ function Window.new(options)
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
     })
 
+    -- ContentContainer positioned as requested
     self.ContentContainer = New("Frame", self.MainFrame, {
         Name = "ContentContainer",
         BackgroundTransparency = 1,
@@ -1020,7 +1034,7 @@ function Window.new(options)
     self.Tabs = {}
     self.ActiveTab = nil
 
-    -- Drag
+    -- Smooth drag (RunService.Heartbeat)
     local dragData = { active = false, startMouse = nil, startPos = nil, connection = nil }
 
     local function updateDrag()
@@ -1062,7 +1076,7 @@ function Window.new(options)
         end
     end)
 
-    -- Keybind listener
+    -- Keybind listener (global)
     self.KeybindConnection = UserInputService.InputBegan:Connect(function(input, processed)
         if processed then return end
         for _, binding in ipairs(self.Keybinds) do
@@ -1113,6 +1127,7 @@ function Window.new(options)
         end
     end)
 
+    -- Built‑in toggle (RightShift)
     if self.ToggleKey then
         self.ToggleConnection = UserInputService.InputBegan:Connect(function(input, processed)
             if processed then return end
@@ -1127,12 +1142,12 @@ function Window.new(options)
     return self
 end
 
--- ─── CreateSettingsTab ────────────────────────────────────
+-- ─── Settings tab (auto-created) ──────────────────────────
 function Window:CreateSettingsTab()
     local settingsTab = self:CreateTab("Settings", false)
 
     local configSection = settingsTab:CreateSection("Configs", "Left")
-    configSection:AddDropdown({
+    local configDropdown = configSection:AddDropdown({
         Text = "",
         Values = {"Custom 1", "Custom 2", "Custom 3"},
         Default = "Custom 1",
@@ -1299,7 +1314,7 @@ function Window:Destroy()
 end
 
 -- ─────────────────────────────────────────────────────────────
---  Library entry
+--  Library entry (auto‑unload)
 -- ─────────────────────────────────────────────────────────────
 function Division:CreateWindow(options)
     if _G.DivisionUI_Window then
