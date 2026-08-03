@@ -1,16 +1,5 @@
 --[[
-    Division UI Library – Ultimate (Complete)
-    - Highest ZIndex to overlay Roblox UI
-    - Auto‑sizing elements (fill parent width)
-    - Keybinds with mouse support & modes (Toggle/Hold/Always)
-    - Formatted key names (e.g., "Right Shift")
-    - Transparent key button, hover text only
-    - Dropdown ZIndex fixed (no clipping)
-    - Tweened toggles & sliders
-    - AddButton
-    - Manual Settings tab (:CreateSettingsTab())
-    - Smooth drag (RunService.Heartbeat)
-    - IgnoreGuiInset
+    Division UI Library – Ultimate (Fixed Toggle)
 ]]
 
 local Division = {}
@@ -198,7 +187,7 @@ function Section:AddLabel(text)
     return label
 end
 
--- ─── Toggle ──────────────────────────────────────────────
+-- ─── Toggle (FIXED: uses TextButton for click) ──────────
 function Section:AddToggle(options)
     options = options or {}
     local text = options.Text or "Toggle"
@@ -208,11 +197,14 @@ function Section:AddToggle(options)
     self._elementIndex = self._elementIndex + 1
     local z = 3000 - self._elementIndex
 
-    local row = New("Frame", self.ItemsContainer, {
+    -- Use TextButton instead of Frame to get MouseButton1Click
+    local row = New("TextButton", self.ItemsContainer, {
         Name = "Toggle",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 0, ITEM_HEIGHT),
         BorderSizePixel = 0,
+        Text = "",
+        AutoButtonColor = false,
         LayoutOrder = #self.ItemsContainer:GetChildren() + 1,
         ZIndex = z,
     })
@@ -676,7 +668,7 @@ function Section:AddButton(options)
 end
 
 -- ─────────────────────────────────────────────────────────────
---  Window class
+--  Window class (unchanged)
 -- ─────────────────────────────────────────────────────────────
 local Window = {}
 Window.__index = Window
@@ -701,7 +693,6 @@ function Window.new(options)
         IgnoreGuiInset = true,
     })
 
-    -- Watermark
     self.WatermarkLabel = New("TextLabel", self.Gui, {
         Name = "Watermark",
         BackgroundTransparency = 1,
@@ -718,7 +709,6 @@ function Window.new(options)
         ZIndex = 10000,
     })
 
-    -- Main window
     self.MainFrame = New("Frame", self.Gui, {
         Name = "Main",
         BackgroundTransparency = 1,
