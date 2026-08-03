@@ -1,6 +1,8 @@
 --[[
-    Division UI Library – Complete
-    - Keybinds with mouse support & modes (Toggle/Hold/Always)
+    Division UI Library – Ultimate
+    - Highest ZIndex to overlay Roblox UI
+    - Top element in each section has highest ZIndex
+    - Keybinds with mouse support & modes
     - Auto‑sizing key buttons + hover effect
     - IgnoreGuiInset
     - Dropdown ZIndex fixed
@@ -121,6 +123,9 @@ function Section.new(tab, name, side)
         SortOrder = Enum.SortOrder.LayoutOrder,
     })
 
+    -- Counter for ZIndex: first element gets highest
+    local elementIndex = 0
+
     local selfObj = {
         Name = name,
         Frame = sectionFrame,
@@ -129,6 +134,7 @@ function Section.new(tab, name, side)
         Tab = tab,
         Side = side,
         Elements = {},
+        _elementIndex = 0, -- used to assign ZIndex
     }
     setmetatable(selfObj, Section)
 
@@ -154,6 +160,9 @@ end
 
 -- ─── Label ──────────────────────────────────────────────
 function Section:AddLabel(text)
+    self._elementIndex = self._elementIndex + 1
+    local z = 3000 - self._elementIndex  -- first gets highest
+
     local label = New("TextLabel", self.ItemsContainer, {
         Name = "Label",
         BackgroundTransparency = 1,
@@ -166,6 +175,7 @@ function Section:AddLabel(text)
         Size = UDim2.new(1, 0, 0, LABEL_HEIGHT),
         BorderSizePixel = 0,
         LayoutOrder = #self.ItemsContainer:GetChildren() + 1,
+        ZIndex = z,
     })
     return label
 end
@@ -177,6 +187,9 @@ function Section:AddToggle(options)
     local default = options.Default or false
     local callback = options.Callback or function() end
 
+    self._elementIndex = self._elementIndex + 1
+    local z = 3000 - self._elementIndex
+
     local row = New("TextButton", self.ItemsContainer, {
         Name = "Toggle",
         BackgroundTransparency = 1,
@@ -185,6 +198,7 @@ function Section:AddToggle(options)
         Text = "",
         AutoButtonColor = false,
         LayoutOrder = #self.ItemsContainer:GetChildren() + 1,
+        ZIndex = z,
     })
 
     local toggleFrame = New("Frame", row, {
@@ -195,6 +209,7 @@ function Section:AddToggle(options)
         AnchorPoint = Vector2.new(0.5, 0.5),
         BorderSizePixel = 0,
         LayoutOrder = 1,
+        ZIndex = z,
     })
 
     local label = New("TextLabel", row, {
@@ -210,6 +225,7 @@ function Section:AddToggle(options)
         Position = UDim2.new(0.07, 0, -0.125, 0),
         LayoutOrder = 2,
         BorderSizePixel = 0,
+        ZIndex = z,
     })
 
     New("UIListLayout", row, {
@@ -246,12 +262,16 @@ function Section:AddSlider(options)
     local rounding = options.Rounding or 1
     local callback = options.Callback or function() end
 
+    self._elementIndex = self._elementIndex + 1
+    local z = 3000 - self._elementIndex
+
     local row = New("Frame", self.ItemsContainer, {
         Name = "Slider",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 0, 16),
         BorderSizePixel = 0,
         LayoutOrder = #self.ItemsContainer:GetChildren() + 1,
+        ZIndex = z,
     })
 
     local label = New("TextLabel", row, {
@@ -267,6 +287,7 @@ function Section:AddSlider(options)
         Position = UDim2.new(0, 0, -0.125, 0),
         LayoutOrder = 1,
         BorderSizePixel = 0,
+        ZIndex = z,
     })
 
     local sliderOuter = New("Frame", row, {
@@ -277,12 +298,14 @@ function Section:AddSlider(options)
         Position = UDim2.new(0, 0, 0.57143, 0),
         LayoutOrder = 2,
         BorderSizePixel = 0,
+        ZIndex = z,
     })
     local sliderFill = New("Frame", sliderOuter, {
         BackgroundColor3 = COLORS.Accent,
         Size = UDim2.new(1, 0, 1, 0),
         Position = UDim2.new(0.007, 0, 0, 0),
         BorderSizePixel = 0,
+        ZIndex = z,
     })
 
     New("UIListLayout", row, {
@@ -340,12 +363,16 @@ function Section:AddDropdown(options)
     local default = options.Default or values[1] or ""
     local callback = options.Callback or function() end
 
+    self._elementIndex = self._elementIndex + 1
+    local z = 3000 - self._elementIndex
+
     local row = New("Frame", self.ItemsContainer, {
         Name = "Dropdown",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 0, 16),
         BorderSizePixel = 0,
         LayoutOrder = #self.ItemsContainer:GetChildren() + 1,
+        ZIndex = z,
     })
 
     if text ~= "" then
@@ -362,6 +389,7 @@ function Section:AddDropdown(options)
             Position = UDim2.new(0, 0, 0, 0),
             LayoutOrder = 1,
             BorderSizePixel = 0,
+            ZIndex = z,
         })
     end
 
@@ -373,7 +401,7 @@ function Section:AddDropdown(options)
         AnchorPoint = Vector2.new(0, 0.5),
         LayoutOrder = 2,
         BorderSizePixel = 0,
-        ZIndex = 10,
+        ZIndex = z + 10,  -- higher than row
         ClipsDescendants = false,
     })
     local dropdownText = New("TextLabel", dropdownFrame, {
@@ -389,7 +417,7 @@ function Section:AddDropdown(options)
         Position = UDim2.new(0.48, 0, 0.5, 0),
         AnchorPoint = Vector2.new(0.5, 0.5),
         BorderSizePixel = 0,
-        ZIndex = 10,
+        ZIndex = z + 10,
     })
 
     local itemsFrame = New("ScrollingFrame", dropdownFrame, {
@@ -401,7 +429,7 @@ function Section:AddDropdown(options)
         Position = UDim2.new(0, 0, 0.97, 0),
         BorderSizePixel = 0,
         ScrollBarImageColor3 = Color3.new(0,0,0),
-        ZIndex = 10,
+        ZIndex = z + 20,  -- even higher
         ClipsDescendants = false,
     })
     New("UIListLayout", itemsFrame, {
@@ -441,7 +469,7 @@ function Section:AddDropdown(options)
             Size = UDim2.new(0.95, 0, 0, 12),
             BorderSizePixel = 0,
             AutoButtonColor = false,
-            ZIndex = 10,
+            ZIndex = z + 20,
         })
         item.MouseButton1Click:Connect(function()
             setSelected(val)
@@ -472,6 +500,9 @@ function Section:AddKeybind(options)
     local mode = options.Mode or "Toggle"
     local callback = options.Callback or function() end
 
+    self._elementIndex = self._elementIndex + 1
+    local z = 3000 - self._elementIndex
+
     local row = New("TextButton", self.ItemsContainer, {
         Name = "Keybind",
         BackgroundTransparency = 1,
@@ -480,6 +511,7 @@ function Section:AddKeybind(options)
         Text = "",
         AutoButtonColor = false,
         LayoutOrder = #self.ItemsContainer:GetChildren() + 1,
+        ZIndex = z,
     })
 
     local label = New("TextLabel", row, {
@@ -495,6 +527,7 @@ function Section:AddKeybind(options)
         AnchorPoint = Vector2.new(0, 0.5),
         LayoutOrder = 1,
         BorderSizePixel = 0,
+        ZIndex = z,
     })
 
     -- Mode dropdown
@@ -508,6 +541,7 @@ function Section:AddKeybind(options)
     modeFrame.Parent = row
     modeFrame.Size = UDim2.new(0, 60, 0, 12)
     modeFrame.LayoutOrder = 2
+    modeFrame.ZIndex = z  -- keep same
 
     -- Key button
     local keyButton = New("TextButton", row, {
@@ -522,6 +556,7 @@ function Section:AddKeybind(options)
         LayoutOrder = 3,
         BorderSizePixel = 0,
         AutoButtonColor = false,
+        ZIndex = z,
     })
 
     local function updateKeyButtonWidth()
@@ -615,6 +650,9 @@ function Section:AddButton(options)
     local text = options.Text or "Button"
     local callback = options.Callback or function() end
 
+    self._elementIndex = self._elementIndex + 1
+    local z = 3000 - self._elementIndex
+
     local row = New("TextButton", self.ItemsContainer, {
         Name = "Button",
         BackgroundTransparency = 1,
@@ -623,6 +661,7 @@ function Section:AddButton(options)
         Text = "",
         AutoButtonColor = false,
         LayoutOrder = #self.ItemsContainer:GetChildren() + 1,
+        ZIndex = z,
     })
 
     local label = New("TextLabel", row, {
@@ -636,6 +675,7 @@ function Section:AddButton(options)
         Size = UDim2.new(1, 0, 1, 0),
         Position = UDim2.new(0, 0, 0, 0),
         BorderSizePixel = 0,
+        ZIndex = z,
     })
 
     row.MouseEnter:Connect(function()
@@ -680,7 +720,7 @@ function Window.new(options)
         IgnoreGuiInset = true,
     })
 
-    -- Watermark
+    -- Watermark (top‑left, highest ZIndex)
     self.WatermarkLabel = New("TextLabel", self.Gui, {
         Name = "Watermark",
         BackgroundTransparency = 1,
@@ -694,10 +734,10 @@ function Window.new(options)
         Size = UDim2.new(0, 300, 0, 14),
         Position = UDim2.new(0, 10, 0, 10),
         AnchorPoint = Vector2.new(0, 0),
-        ZIndex = 10,
+        ZIndex = 10000,  -- very high
     })
 
-    -- Main window
+    -- Main window frame
     self.MainFrame = New("Frame", self.Gui, {
         Name = "Main",
         BackgroundTransparency = 1,
@@ -707,9 +747,10 @@ function Window.new(options)
         BorderSizePixel = 0,
     })
 
+    -- Background (solid) – base ZIndex
     self.Background = New("Frame", self.MainFrame, {
         Name = "Background",
-        ZIndex = 0,
+        ZIndex = 1000,
         BackgroundColor3 = COLORS.Background,
         Size = UDim2.new(1, 0, 1, 0),
         AnchorPoint = Vector2.new(0.5, 0.5),
@@ -721,7 +762,7 @@ function Window.new(options)
     -- Top bar
     self.TopBar = New("Frame", self.MainFrame, {
         Name = "Top",
-        ZIndex = 1,
+        ZIndex = 1001,
         BackgroundColor3 = COLORS.TopBar,
         Size = UDim2.new(1, -2, 0, TAB_HEIGHT),
         Position = UDim2.new(0.5, 0, 0.03, 0),
@@ -745,17 +786,18 @@ function Window.new(options)
         AnchorPoint = Vector2.new(0.5, 0.5),
         BorderSizePixel = 0,
         TextTransparency = 1,
+        ZIndex = 1001,
     })
     New("UITextSizeConstraint", self.TitleLabel)
 
-    -- Tabs
+    -- Tabs container
     self.TabsContainer = New("Frame", self.MainFrame, {
         Name = "TabsContainer",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 0, TAB_HEIGHT),
         Position = UDim2.new(0.5, 0, 0, TAB_HEIGHT + 3),
         AnchorPoint = Vector2.new(0.5, 0),
-        ZIndex = 1,
+        ZIndex = 1001,
     })
     New("UIListLayout", self.TabsContainer, {
         Padding = UDim.new(0, 2),
@@ -764,20 +806,20 @@ function Window.new(options)
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
     })
 
-    -- Content
+    -- Content container
     self.ContentContainer = New("Frame", self.MainFrame, {
         Name = "ContentContainer",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, -43),
         Position = UDim2.new(0.5, 0, 0, 43),
         AnchorPoint = Vector2.new(0.5, 0),
-        ZIndex = 1,
+        ZIndex = 1001,
     })
 
     self.Tabs = {}
     self.ActiveTab = nil
 
-    -- Smooth drag
+    -- Smooth drag (using RunService)
     local dragData = { active = false, startMouse = nil, startPos = nil, connection = nil }
 
     local function updateDrag()
@@ -889,7 +931,6 @@ end
 function Window:CreateSettingsTab()
     local settingsTab = self:CreateTab("Settings", false)
 
-    -- Left panel: Configs
     local configSection = settingsTab:CreateSection("Configs", "Left")
     configSection:AddDropdown({
         Text = "",
@@ -900,7 +941,6 @@ function Window:CreateSettingsTab()
     configSection:AddButton({ Text = "Save", Callback = function() print("Save config") end })
     configSection:AddButton({ Text = "Reset", Callback = function() print("Reset config") end })
 
-    -- Right panel: Menu Key
     local menuSection = settingsTab:CreateSection("Menu", "Right")
     menuSection:AddKeybind({
         Text = "Menu Key",
@@ -971,6 +1011,7 @@ function Window:CreateTab(name, isDefault)
         BorderSizePixel = 0,
         AutoButtonColor = false,
         BackgroundTransparency = 1,
+        ZIndex = 1001,
     })
     New("UIStroke", button, { Color = COLORS.Border })
 
@@ -989,12 +1030,14 @@ function Window:CreateTab(name, isDefault)
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),
         Visible = isDefault or false,
+        ZIndex = 1001,
     })
 
     local leftPanel = New("Frame", content, {
         Name = "Left",
         BackgroundTransparency = 1,
         Size = UDim2.new(0.5, -2, 1, 0),
+        ZIndex = 1001,
     })
     New("UIListLayout", leftPanel, {
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
@@ -1007,6 +1050,7 @@ function Window:CreateTab(name, isDefault)
         BackgroundTransparency = 1,
         Size = UDim2.new(0.5, -2, 1, 0),
         Position = UDim2.new(0.5, 0, 0, 0),
+        ZIndex = 1001,
     })
     New("UIListLayout", rightPanel, {
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
