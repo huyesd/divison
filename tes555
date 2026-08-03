@@ -1,11 +1,12 @@
 --[[
-    Division UI Library – sections fixed, no auto‑unload
+    Division UI Library – with tweening, watermark, no section stroke, content container repositioned
 ]]
 
 local Division = {}
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 
 -- ─────────────────────────────────────────────────────────────
 --  Constants
@@ -62,7 +63,7 @@ local function Color3ToHex(c)
 end
 
 -- ─────────────────────────────────────────────────────────────
---  Section class – fixed to display properly
+--  Section class – NO STROKE
 -- ─────────────────────────────────────────────────────────────
 local Section = {}
 Section.__index = Section
@@ -71,20 +72,14 @@ function Section.new(tab, name, side)
     side = side or "Left"
     local panel = (side == "Left") and tab.LeftPanel or tab.RightPanel
 
-    -- Section frame: fills the panel width, height auto-adjusted
     local sectionFrame = New("Frame", panel, {
         Name = name,
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 0),  -- height will be updated
+        Size = UDim2.new(1, 0, 0, 20),
         BorderSizePixel = 0,
     })
-    -- Border
-    local stroke = New("UIStroke", sectionFrame, {
-        Color = COLORS.Border,
-        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-    })
+    -- ⚠️ No UIStroke here
 
-    -- Inner container with padding
     local itemsContainer = New("Frame", sectionFrame, {
         Name = "Items",
         BackgroundTransparency = 1,
@@ -93,8 +88,6 @@ function Section.new(tab, name, side)
         AnchorPoint = Vector2.new(0.5, 0.5),
         BorderSizePixel = 0,
     })
-
-    -- Layout: left‑aligned, items take full width
     local itemsLayout = New("UIListLayout", itemsContainer, {
         HorizontalAlignment = Enum.HorizontalAlignment.Left,
         Padding = UDim.new(0, 4),
@@ -112,7 +105,6 @@ function Section.new(tab, name, side)
     }
     setmetatable(selfObj, Section)
 
-    -- Update section height when children change
     local function updateSize()
         local totalHeight = 0
         local children = itemsContainer:GetChildren()
@@ -121,15 +113,13 @@ function Section.new(tab, name, side)
                 totalHeight = totalHeight + child.Size.Y.Offset + itemsLayout.Padding.Offset
             end
         end
-        -- Add some padding at bottom
         totalHeight = totalHeight + itemsLayout.Padding.Offset * 2
-        sectionFrame.Size = UDim2.new(1, 0, 0, totalHeight + 10)
+        sectionFrame.Size = UDim2.new(1, 0, 0, math.max(totalHeight + 10, 20))
     end
 
     itemsContainer.ChildAdded:Connect(updateSize)
     itemsContainer.ChildRemoved:Connect(updateSize)
-    -- Initial update after a small delay to let children settle
-    task.wait(0.01)
+    task.wait()
     updateSize()
 
     return selfObj
@@ -775,7 +765,7 @@ function Section:AddColorPicker(options)
 end
 
 -- ─────────────────────────────────────────────────────────────
---  Window class – draggable, centered tabs
+--  Window class – draggable, centered tabs, with tweening & watermark
 -- ─────────────────────────────────────────────────────────────
 local Window = {}
 Window.__index = Window
@@ -790,12 +780,12 @@ function Window.new(options)
     self.TabPadding = options.TabPadding or 8
     self.MenuFadeTime = options.MenuFadeTime or 0.2
     self.Keybinds = {}
-
+    self.WatermarkText = options.Watermark or "Division 2.72 | NA | not connected | 75"
     self.ToggleKey = options.ToggleKey or Enum.KeyCode.RightShift
 
     self.Gui = New("ScreenGui", Player:WaitForChild("PlayerGui"), {
         Name = "DivisionUI",
-        Enabled = self.AutoShow,
+        Enabled = true, -- we'll control visibility via tween
         ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
     })
 
@@ -808,6 +798,7 @@ function Window.new(options)
         BorderSizePixel = 0,
     })
 
+    -- Background (solid) – will be tweened for fade effect
     self.Background = New("Frame", self.MainFrame, {
         Name = "Background",
         ZIndex = 0,
@@ -816,6 +807,7 @@ function Window.new(options)
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.new(0.5, 0, 0.5, 0),
         BorderSizePixel = 0,
+        BackgroundTransparency = 1, -- start hidden
     })
 
     -- Top bar – draggable
@@ -827,6 +819,7 @@ function Window.new(options)
         Position = UDim2.new(0.5, 0, 0.03, 0),
         AnchorPoint = Vector2.new(0.5, 0.5),
         BorderSizePixel = 0,
+        BackgroundTransparency = 1,
     })
     New("UIStroke", self.TopBar, { Color = COLORS.Border })
 
@@ -862,13 +855,31 @@ function Window.new(options)
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
     })
 
-    -- Content container
+    -- Content container – repositioned to {0.5, 0}, {0, 43} with anchor (0.5, 0)
     self.ContentContainer = New("Frame", self.MainFrame, {
         Name = "ContentContainer",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 1, -(TAB_HEIGHT * 2 + 6)),
-        Position = UDim2.new(0, 0, TAB_HEIGHT * 2 + 4, 0),
+        Size = UDim2.new(1, 0, 1, -43),  -- fill from y=43 to bottom
+        Position = UDim2.new(0.5, 0, 0, 43),
+        AnchorPoint = Vector2.new(0.5, 0),
         ZIndex = 1,
+    })
+
+    -- Watermark (top-left)
+    self.WatermarkLabel = New("TextLabel", self.MainFrame, {
+        Name = "Watermark",
+        BackgroundTransparency = 1,
+        Text = self.WatermarkText,
+        TextColor3 = Color3.fromRGB(180, 180, 180),
+        FontFace = FONTS.Default,
+        TextScaled = false,
+        TextSize = 11,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Top,
+        Size = UDim2.new(0, 300, 0, 14),
+        Position = UDim2.new(0, 6, 0, 6),
+        AnchorPoint = Vector2.new(0, 0),
+        ZIndex = 2,
     })
 
     self.Tabs = {}
@@ -937,9 +948,73 @@ function Window.new(options)
         end)
     end
 
+    -- Initial tween to show if AutoShow
+    if self.AutoShow then
+        self:FadeIn()
+    else
+        self.Background.BackgroundTransparency = 1
+        self.TopBar.BackgroundTransparency = 1
+        self.TitleLabel.TextTransparency = 1
+        -- hide content?
+    end
+
     return self
 end
 
+-- ───── Fade In/Out ─────
+function Window:FadeIn()
+    if not self.Gui.Enabled then return end
+    local tweenInfo = TweenInfo.new(self.MenuFadeTime or 0.2, Enum.EasingStyle.Linear)
+    local props = { BackgroundTransparency = 0 }
+    local bgTween = TweenService:Create(self.Background, tweenInfo, props)
+    local topTween = TweenService:Create(self.TopBar, tweenInfo, props)
+    local titleTween = TweenService:Create(self.TitleLabel, tweenInfo, { TextTransparency = 0 })
+    bgTween:Play()
+    topTween:Play()
+    titleTween:Play()
+end
+
+function Window:FadeOut()
+    if not self.Gui.Enabled then return end
+    local tweenInfo = TweenInfo.new(self.MenuFadeTime or 0.2, Enum.EasingStyle.Linear)
+    local props = { BackgroundTransparency = 1 }
+    local bgTween = TweenService:Create(self.Background, tweenInfo, props)
+    local topTween = TweenService:Create(self.TopBar, tweenInfo, props)
+    local titleTween = TweenService:Create(self.TitleLabel, tweenInfo, { TextTransparency = 1 })
+    bgTween:Play()
+    topTween:Play()
+    titleTween:Play()
+    -- Wait and disable GUI
+    task.wait(self.MenuFadeTime or 0.2)
+    self.Gui.Enabled = false
+end
+
+function Window:ToggleVisibility()
+    if self.Gui.Enabled then
+        -- currently visible, fade out
+        self:FadeOut()
+    else
+        self.Gui.Enabled = true
+        self:FadeIn()
+    end
+end
+
+function Window:Show()
+    self.Gui.Enabled = true
+    self:FadeIn()
+end
+
+function Window:Hide()
+    self:FadeOut()
+end
+
+-- ───── Watermark setter ─────
+function Window:SetWatermark(text)
+    self.WatermarkText = text
+    self.WatermarkLabel.Text = text
+end
+
+-- ───── CreateTab ─────
 function Window:CreateTab(name, isDefault)
     local button = New("TextButton", self.TabsContainer, {
         Name = name,
@@ -952,6 +1027,7 @@ function Window:CreateTab(name, isDefault)
         Size = UDim2.new(0, 118, 1, 0),
         BorderSizePixel = 0,
         AutoButtonColor = false,
+        BackgroundTransparency = 1,
     })
     New("UIStroke", button, { Color = COLORS.Border })
 
@@ -1030,13 +1106,6 @@ function Window:SelectTab(tab)
     self.ActiveTab = tab
 end
 
-function Window:ToggleVisibility()
-    self.Gui.Enabled = not self.Gui.Enabled
-end
-
-function Window:Show() self.Gui.Enabled = true end
-function Window:Hide() self.Gui.Enabled = false end
-
 function Window:Destroy()
     if self.KeybindConnection then self.KeybindConnection:Disconnect() end
     if self.ToggleConnection then self.ToggleConnection:Disconnect() end
@@ -1044,7 +1113,7 @@ function Window:Destroy()
 end
 
 -- ─────────────────────────────────────────────────────────────
---  Library entry – no auto‑unload (you can manually destroy)
+--  Library entry
 -- ─────────────────────────────────────────────────────────────
 function Division:CreateWindow(options)
     return Window.new(options)
