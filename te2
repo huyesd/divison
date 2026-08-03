@@ -2,14 +2,8 @@
     Division UI Library – Ultimate
     - Highest ZIndex to overlay Roblox UI
     - Top element in each section has highest ZIndex
-    - Keybinds with mouse support & modes
-    - Auto‑sizing key buttons + hover effect
-    - IgnoreGuiInset
-    - Dropdown ZIndex fixed
-    - Tweened toggles & sliders
-    - AddButton
-    - Manual Settings tab (call :CreateSettingsTab() after your tabs)
-    - Smooth drag
+    - Keybinds: transparent background, hover text only
+    - All other features unchanged
 ]]
 
 local Division = {}
@@ -123,7 +117,6 @@ function Section.new(tab, name, side)
         SortOrder = Enum.SortOrder.LayoutOrder,
     })
 
-    -- Counter for ZIndex: first element gets highest
     local elementIndex = 0
 
     local selfObj = {
@@ -134,7 +127,7 @@ function Section.new(tab, name, side)
         Tab = tab,
         Side = side,
         Elements = {},
-        _elementIndex = 0, -- used to assign ZIndex
+        _elementIndex = 0,
     }
     setmetatable(selfObj, Section)
 
@@ -161,7 +154,7 @@ end
 -- ─── Label ──────────────────────────────────────────────
 function Section:AddLabel(text)
     self._elementIndex = self._elementIndex + 1
-    local z = 3000 - self._elementIndex  -- first gets highest
+    local z = 3000 - self._elementIndex
 
     local label = New("TextLabel", self.ItemsContainer, {
         Name = "Label",
@@ -180,7 +173,7 @@ function Section:AddLabel(text)
     return label
 end
 
--- ─── Toggle (with tween) ──────────────────────────────
+-- ─── Toggle ──────────────────────────────────────────────
 function Section:AddToggle(options)
     options = options or {}
     local text = options.Text or "Toggle"
@@ -252,7 +245,7 @@ function Section:AddToggle(options)
     }
 end
 
--- ─── Slider (with tween) ──────────────────────────────
+-- ─── Slider ──────────────────────────────────────────────
 function Section:AddSlider(options)
     options = options or {}
     local text = options.Text or "Slider"
@@ -355,7 +348,7 @@ function Section:AddSlider(options)
     }
 end
 
--- ─── Dropdown (ZIndex fixed) ──────────────────────────
+-- ─── Dropdown ──────────────────────────────────────────────
 function Section:AddDropdown(options)
     options = options or {}
     local text = options.Text or ""
@@ -401,7 +394,7 @@ function Section:AddDropdown(options)
         AnchorPoint = Vector2.new(0, 0.5),
         LayoutOrder = 2,
         BorderSizePixel = 0,
-        ZIndex = z + 10,  -- higher than row
+        ZIndex = z + 10,
         ClipsDescendants = false,
     })
     local dropdownText = New("TextLabel", dropdownFrame, {
@@ -429,7 +422,7 @@ function Section:AddDropdown(options)
         Position = UDim2.new(0, 0, 0.97, 0),
         BorderSizePixel = 0,
         ScrollBarImageColor3 = Color3.new(0,0,0),
-        ZIndex = z + 20,  -- even higher
+        ZIndex = z + 20,
         ClipsDescendants = false,
     })
     New("UIListLayout", itemsFrame, {
@@ -492,7 +485,7 @@ function Section:AddDropdown(options)
     }
 end
 
--- ─── Keybind (with mouse support, modes, auto-size, hover) ──
+-- ─── Keybind (transparent background, hover text only) ──
 function Section:AddKeybind(options)
     options = options or {}
     local text = options.Text or "Keybind"
@@ -541,12 +534,12 @@ function Section:AddKeybind(options)
     modeFrame.Parent = row
     modeFrame.Size = UDim2.new(0, 60, 0, 12)
     modeFrame.LayoutOrder = 2
-    modeFrame.ZIndex = z  -- keep same
+    modeFrame.ZIndex = z
 
-    -- Key button
+    -- Key button – transparent background, only text changes on hover
     local keyButton = New("TextButton", row, {
         Name = "KeyButton",
-        BackgroundColor3 = COLORS.ToggleOff,
+        BackgroundTransparency = 1,          -- fully transparent
         Text = defaultKey,
         TextColor3 = COLORS.Text,
         FontFace = FONTS.Bold,
@@ -570,12 +563,11 @@ function Section:AddKeybind(options)
     end
     task.spawn(updateKeyButtonWidth)
 
+    -- Hover: only text changes, background stays transparent
     keyButton.MouseEnter:Connect(function()
-        keyButton.BackgroundColor3 = COLORS.Accent
-        keyButton.TextColor3 = COLORS.Background
+        keyButton.TextColor3 = COLORS.Accent
     end)
     keyButton.MouseLeave:Connect(function()
-        keyButton.BackgroundColor3 = COLORS.ToggleOff
         keyButton.TextColor3 = COLORS.Text
     end)
 
@@ -592,7 +584,6 @@ function Section:AddKeybind(options)
         currentKey = keyDisplay
         keyButton.Text = keyDisplay
         updateKeyButtonWidth()
-        -- Update stored binding
         for _, binding in ipairs(window.Keybinds) do
             if binding.row == row then
                 binding.key = keyDisplay
@@ -632,7 +623,6 @@ function Section:AddKeybind(options)
         end)
     end)
 
-    -- Store binding info
     local binding = { key = currentKey, mode = mode, callback = callback, active = false, row = row }
     table.insert(window.Keybinds, binding)
 
@@ -720,7 +710,7 @@ function Window.new(options)
         IgnoreGuiInset = true,
     })
 
-    -- Watermark (top‑left, highest ZIndex)
+    -- Watermark
     self.WatermarkLabel = New("TextLabel", self.Gui, {
         Name = "Watermark",
         BackgroundTransparency = 1,
@@ -734,10 +724,10 @@ function Window.new(options)
         Size = UDim2.new(0, 300, 0, 14),
         Position = UDim2.new(0, 10, 0, 10),
         AnchorPoint = Vector2.new(0, 0),
-        ZIndex = 10000,  -- very high
+        ZIndex = 10000,
     })
 
-    -- Main window frame
+    -- Main window
     self.MainFrame = New("Frame", self.Gui, {
         Name = "Main",
         BackgroundTransparency = 1,
@@ -747,7 +737,6 @@ function Window.new(options)
         BorderSizePixel = 0,
     })
 
-    -- Background (solid) – base ZIndex
     self.Background = New("Frame", self.MainFrame, {
         Name = "Background",
         ZIndex = 1000,
@@ -759,7 +748,6 @@ function Window.new(options)
         BackgroundTransparency = 1,
     })
 
-    -- Top bar
     self.TopBar = New("Frame", self.MainFrame, {
         Name = "Top",
         ZIndex = 1001,
@@ -790,7 +778,6 @@ function Window.new(options)
     })
     New("UITextSizeConstraint", self.TitleLabel)
 
-    -- Tabs container
     self.TabsContainer = New("Frame", self.MainFrame, {
         Name = "TabsContainer",
         BackgroundTransparency = 1,
@@ -806,7 +793,6 @@ function Window.new(options)
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
     })
 
-    -- Content container
     self.ContentContainer = New("Frame", self.MainFrame, {
         Name = "ContentContainer",
         BackgroundTransparency = 1,
@@ -819,7 +805,7 @@ function Window.new(options)
     self.Tabs = {}
     self.ActiveTab = nil
 
-    -- Smooth drag (using RunService)
+    -- Smooth drag
     local dragData = { active = false, startMouse = nil, startPos = nil, connection = nil }
 
     local function updateDrag()
@@ -912,7 +898,6 @@ function Window.new(options)
         end
     end)
 
-    -- Built‑in toggle key
     if self.ToggleKey then
         self.ToggleConnection = UserInputService.InputBegan:Connect(function(input, processed)
             if processed then return end
@@ -927,7 +912,7 @@ function Window.new(options)
     return self
 end
 
--- ─── Manual Settings tab creator ──────────────────────
+-- ─── Manual Settings tab ──────────────────────────────
 function Window:CreateSettingsTab()
     local settingsTab = self:CreateTab("Settings", false)
 
