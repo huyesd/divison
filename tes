@@ -1,6 +1,5 @@
 --[[
-    Division UI Library – with auto‑unload, built‑in toggle keybind, keybinds & color picker
-    FIXED: ZIndex layering – tabs are now visible
+    Division UI Library – with auto‑unload, built‑in toggle keybind, keybinds, color picker & labels
 ]]
 
 local Division = {}
@@ -20,16 +19,19 @@ local COLORS = {
     DimText = Color3.fromRGB(144, 144, 144),
     ToggleOff = Color3.fromRGB(31, 31, 31),
     ToggleOn = Color3.fromRGB(55, 225, 237),
+    LabelColor = Color3.fromRGB(150, 150, 150),
 }
 
 local FONTS = {
     Default = Font.new("rbxasset://fonts/families/RobotoMono.json", Enum.FontWeight.Medium, Enum.FontStyle.Normal),
     Bold = Font.new("rbxasset://fonts/families/RobotoMono.json", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal),
+    Label = Font.new("rbxasset://fonts/families/RobotoMono.json", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal),
 }
 
 local WINDOW_SIZE = UDim2.new(0, 600, 0, 375)
 local TAB_HEIGHT = 19
 local ITEM_HEIGHT = 8
+local LABEL_HEIGHT = 10
 
 -- ─────────────────────────────────────────────────────────────
 --  Utility
@@ -87,7 +89,7 @@ function Section.new(tab, name, side)
     })
     local itemsLayout = New("UIListLayout", itemsContainer, {
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
-        Padding = UDim.new(0, 8),
+        Padding = UDim.new(0, 6),
         SortOrder = Enum.SortOrder.LayoutOrder,
     })
 
@@ -118,6 +120,24 @@ function Section.new(tab, name, side)
     return selfObj
 end
 
+-- ──────── Label ────────
+function Section:AddLabel(text)
+    local label = New("TextLabel", self.ItemsContainer, {
+        Name = "Label",
+        BackgroundTransparency = 1,
+        Text = text,
+        TextColor3 = COLORS.LabelColor,
+        FontFace = FONTS.Label,
+        TextScaled = true,
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Size = UDim2.new(0, 260, 0, LABEL_HEIGHT),
+        BorderSizePixel = 0,
+        LayoutOrder = #self.ItemsContainer:GetChildren() + 1,
+    })
+    return label
+end
+
 -- ──────── Toggle ────────
 function Section:AddToggle(options)
     options = options or {}
@@ -128,17 +148,18 @@ function Section:AddToggle(options)
     local row = New("TextButton", self.ItemsContainer, {
         Name = "Toggle",
         BackgroundTransparency = 1,
-        Size = UDim2.new(0, 285, 0, ITEM_HEIGHT),
+        Size = UDim2.new(0, 260, 0, ITEM_HEIGHT),
         BorderSizePixel = 0,
         Text = "",
         AutoButtonColor = false,
+        LayoutOrder = #self.ItemsContainer:GetChildren() + 1,
     })
 
     local toggleFrame = New("Frame", row, {
         Name = "ToggleFrame",
         BackgroundColor3 = default and COLORS.ToggleOn or COLORS.ToggleOff,
-        Size = UDim2.new(0.036, 0, 1.16137, 0),
-        Position = UDim2.new(0.02278, 0, 0.5, 0),
+        Size = UDim2.new(0.04, 0, 1.16137, 0),
+        Position = UDim2.new(0.025, 0, 0.5, 0),
         AnchorPoint = Vector2.new(0.5, 0.5),
         BorderSizePixel = 0,
         LayoutOrder = 1,
@@ -147,20 +168,20 @@ function Section:AddToggle(options)
     local label = New("TextLabel", row, {
         Name = "Text",
         BackgroundTransparency = 1,
-        Text = text .. (default and " (Toggled)" or " (Not Toggled)"),
+        Text = text,
         TextColor3 = COLORS.Text,
         FontFace = FONTS.Default,
         TextScaled = true,
         TextSize = 14,
         TextXAlignment = Enum.TextXAlignment.Left,
         Size = UDim2.new(0, 200, 0, 9),
-        Position = UDim2.new(0.06, 0, -0.125, 0),
+        Position = UDim2.new(0.07, 0, -0.125, 0),
         LayoutOrder = 2,
         BorderSizePixel = 0,
     })
 
     New("UIListLayout", row, {
-        Padding = UDim.new(0, 8),
+        Padding = UDim.new(0, 6),
         SortOrder = Enum.SortOrder.LayoutOrder,
         FillDirection = Enum.FillDirection.Horizontal,
     })
@@ -169,7 +190,6 @@ function Section:AddToggle(options)
     local function setState(newState)
         state = newState
         toggleFrame.BackgroundColor3 = state and COLORS.ToggleOn or COLORS.ToggleOff
-        label.Text = text .. (state and " (Toggled)" or " (Not Toggled)")
         callback(state)
     end
 
@@ -196,8 +216,9 @@ function Section:AddSlider(options)
     local row = New("Frame", self.ItemsContainer, {
         Name = "Slider",
         BackgroundTransparency = 1,
-        Size = UDim2.new(0, 285, 0, 16),
+        Size = UDim2.new(0, 260, 0, 16),
         BorderSizePixel = 0,
+        LayoutOrder = #self.ItemsContainer:GetChildren() + 1,
     })
 
     local label = New("TextLabel", row, {
@@ -210,7 +231,7 @@ function Section:AddSlider(options)
         TextSize = 14,
         TextXAlignment = Enum.TextXAlignment.Left,
         Size = UDim2.new(0, 200, 0, 9),
-        Position = UDim2.new(-0.00316, 0, -0.125, 0),
+        Position = UDim2.new(-0.005, 0, -0.125, 0),
         LayoutOrder = 1,
         BorderSizePixel = 0,
     })
@@ -219,7 +240,7 @@ function Section:AddSlider(options)
         Name = "SliderOuter",
         BackgroundColor3 = COLORS.ToggleOff,
         ClipsDescendants = true,
-        Size = UDim2.new(0, 285, 0, 8),
+        Size = UDim2.new(0, 260, 0, 6),
         Position = UDim2.new(0, 0, 0.57143, 0),
         LayoutOrder = 2,
         BorderSizePixel = 0,
@@ -227,7 +248,7 @@ function Section:AddSlider(options)
     local sliderFill = New("Frame", sliderOuter, {
         BackgroundColor3 = COLORS.Accent,
         Size = UDim2.new(1, 0, 1, 0),
-        Position = UDim2.new(0.00702, 0, 0, 0),
+        Position = UDim2.new(0.007, 0, 0, 0),
         BorderSizePixel = 0,
     })
 
@@ -281,7 +302,7 @@ end
 -- ──────── Dropdown ────────
 function Section:AddDropdown(options)
     options = options or {}
-    local text = options.Text or "Dropdown"
+    local text = options.Text or ""
     local values = options.Values or {}
     local default = options.Default or values[1] or ""
     local callback = options.Callback or function() end
@@ -289,21 +310,22 @@ function Section:AddDropdown(options)
     local row = New("Frame", self.ItemsContainer, {
         Name = "Dropdown",
         BackgroundTransparency = 1,
-        Size = UDim2.new(0, 285, 0, 19),
+        Size = UDim2.new(0, 260, 0, 14),
         BorderSizePixel = 0,
+        LayoutOrder = #self.ItemsContainer:GetChildren() + 1,
     })
 
     local label = New("TextLabel", row, {
         Name = "Text",
         BackgroundTransparency = 1,
-        Text = text .. ":",
-        TextColor3 = COLORS.Text,
-        FontFace = FONTS.Default,
+        Text = text,
+        TextColor3 = COLORS.LabelColor,
+        FontFace = FONTS.Label,
         TextScaled = true,
-        TextSize = 14,
+        TextSize = 12,
         TextXAlignment = Enum.TextXAlignment.Left,
-        Size = UDim2.new(0, 200, 0, 9),
-        Position = UDim2.new(-0.00316, 0, -0.125, 0),
+        Size = UDim2.new(0, 120, 0, 9),
+        Position = UDim2.new(-0.005, 0, -0.1, 0),
         LayoutOrder = 1,
         BorderSizePixel = 0,
     })
@@ -311,8 +333,8 @@ function Section:AddDropdown(options)
     local dropdownFrame = New("Frame", row, {
         Name = "DropdownFrame",
         BackgroundColor3 = COLORS.ToggleOff,
-        Size = UDim2.new(0, 130, 0, 10),
-        Position = UDim2.new(0, 0, 0.57143, 0),
+        Size = UDim2.new(0, 120, 0, 10),
+        Position = UDim2.new(0.48, 0, 0.55, 0),
         LayoutOrder = 2,
         BorderSizePixel = 0,
     })
@@ -323,7 +345,7 @@ function Section:AddDropdown(options)
         TextColor3 = COLORS.Text,
         FontFace = FONTS.Default,
         TextScaled = true,
-        TextSize = 14,
+        TextSize = 12,
         TextXAlignment = Enum.TextXAlignment.Left,
         Size = UDim2.new(0.9, 0, 0.9, 0),
         Position = UDim2.new(0.48, 0, 0.5, 0),
@@ -336,12 +358,12 @@ function Section:AddDropdown(options)
         Visible = false,
         Active = true,
         BackgroundColor3 = COLORS.ToggleOff,
-        Size = UDim2.new(0, 130, 0, 30),
-        Position = UDim2.new(0, 0, 0.971, 0),
+        Size = UDim2.new(0, 120, 0, 30),
+        Position = UDim2.new(0, 0, 0.97, 0),
         BorderSizePixel = 0,
         ScrollBarImageColor3 = Color3.new(0,0,0),
     })
-    local itemsLayout = New("UIListLayout", itemsFrame, {
+    New("UIListLayout", itemsFrame, {
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
         SortOrder = Enum.SortOrder.LayoutOrder,
     })
@@ -349,6 +371,7 @@ function Section:AddDropdown(options)
     New("UIListLayout", row, {
         Padding = UDim.new(0, 3),
         SortOrder = Enum.SortOrder.LayoutOrder,
+        FillDirection = Enum.FillDirection.Horizontal,
     })
 
     local selected = default
@@ -371,7 +394,7 @@ function Section:AddDropdown(options)
             BackgroundTransparency = 1,
             FontFace = FONTS.Default,
             TextScaled = true,
-            TextSize = 14,
+            TextSize = 12,
             TextXAlignment = Enum.TextXAlignment.Left,
             Size = UDim2.new(0.95, 0, -0.02849, 10),
             AnchorPoint = Vector2.new(0.5, 0.5),
@@ -389,7 +412,7 @@ function Section:AddDropdown(options)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             itemsFrame.Visible = not itemsFrame.Visible
             local count = #itemsFrame:GetChildren()
-            itemsFrame.Size = UDim2.new(0, 130, 0, math.min(count * 12, 60))
+            itemsFrame.Size = UDim2.new(0, 120, 0, math.min(count * 12, 50))
         end
     end)
 
@@ -409,10 +432,11 @@ function Section:AddKeybind(options)
     local row = New("TextButton", self.ItemsContainer, {
         Name = "Keybind",
         BackgroundTransparency = 1,
-        Size = UDim2.new(0, 285, 0, ITEM_HEIGHT),
+        Size = UDim2.new(0, 260, 0, ITEM_HEIGHT),
         BorderSizePixel = 0,
         Text = "",
         AutoButtonColor = false,
+        LayoutOrder = #self.ItemsContainer:GetChildren() + 1,
     })
 
     local label = New("TextLabel", row, {
@@ -425,7 +449,7 @@ function Section:AddKeybind(options)
         TextSize = 14,
         TextXAlignment = Enum.TextXAlignment.Left,
         Size = UDim2.new(0, 200, 0, 9),
-        Position = UDim2.new(0.06, 0, -0.125, 0),
+        Position = UDim2.new(0.07, 0, -0.125, 0),
         LayoutOrder = 1,
         BorderSizePixel = 0,
     })
@@ -439,14 +463,14 @@ function Section:AddKeybind(options)
         TextScaled = true,
         TextSize = 14,
         Size = UDim2.new(0, 45, 0, ITEM_HEIGHT),
-        Position = UDim2.new(0.81053, 0, -0.125, 0),
+        Position = UDim2.new(0.81, 0, -0.125, 0),
         LayoutOrder = 2,
         BorderSizePixel = 0,
         AutoButtonColor = false,
     })
 
     New("UIListLayout", row, {
-        Padding = UDim.new(0, 8),
+        Padding = UDim.new(0, 6),
         SortOrder = Enum.SortOrder.LayoutOrder,
         FillDirection = Enum.FillDirection.Horizontal,
     })
@@ -511,10 +535,11 @@ function Section:AddColorPicker(options)
     local row = New("TextButton", self.ItemsContainer, {
         Name = "ColorPicker",
         BackgroundTransparency = 1,
-        Size = UDim2.new(0, 285, 0, 16),
+        Size = UDim2.new(0, 260, 0, 16),
         BorderSizePixel = 0,
         Text = "",
         AutoButtonColor = false,
+        LayoutOrder = #self.ItemsContainer:GetChildren() + 1,
     })
 
     local label = New("TextLabel", row, {
@@ -527,7 +552,7 @@ function Section:AddColorPicker(options)
         TextSize = 14,
         TextXAlignment = Enum.TextXAlignment.Left,
         Size = UDim2.new(0, 200, 0, 9),
-        Position = UDim2.new(0.06, 0, -0.125, 0),
+        Position = UDim2.new(0.07, 0, -0.125, 0),
         LayoutOrder = 1,
         BorderSizePixel = 0,
     })
@@ -535,13 +560,13 @@ function Section:AddColorPicker(options)
     local colorPreview = New("Frame", row, {
         Name = "ColorPreview",
         BackgroundColor3 = defaultColor,
-        Size = UDim2.new(0, 16, 0, 16),
+        Size = UDim2.new(0, 14, 0, 14),
         LayoutOrder = 2,
         BorderSizePixel = 0,
     })
 
     New("UIListLayout", row, {
-        Padding = UDim.new(0, 8),
+        Padding = UDim.new(0, 6),
         SortOrder = Enum.SortOrder.LayoutOrder,
         FillDirection = Enum.FillDirection.Horizontal,
     })
@@ -753,14 +778,12 @@ function Window.new(options)
 
     self.ToggleKey = options.ToggleKey or Enum.KeyCode.RightShift
 
-    -- ScreenGui
     self.Gui = New("ScreenGui", Player:WaitForChild("PlayerGui"), {
         Name = "DivisionUI",
         Enabled = self.AutoShow,
         ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
     })
 
-    -- Main frame
     self.MainFrame = New("Frame", self.Gui, {
         Name = "Main",
         BackgroundTransparency = 1,
@@ -770,7 +793,6 @@ function Window.new(options)
         BorderSizePixel = 0,
     })
 
-    -- ⚠️ FIX: Background moved to ZIndex 0 (behind everything)
     self.Background = New("Frame", self.MainFrame, {
         Name = "Background",
         ZIndex = 0,
@@ -781,7 +803,6 @@ function Window.new(options)
         BorderSizePixel = 0,
     })
 
-    -- Top bar (ZIndex 1 so it sits above the background)
     self.TopBar = New("Frame", self.MainFrame, {
         Name = "Top",
         ZIndex = 1,
@@ -809,7 +830,6 @@ function Window.new(options)
     })
     New("UITextSizeConstraint", self.TitleLabel)
 
-    -- ⚠️ FIX: TabsContainer gets ZIndex 1 (above background)
     self.TabsContainer = New("Frame", self.MainFrame, {
         Name = "TabsContainer",
         BackgroundTransparency = 1,
@@ -823,7 +843,6 @@ function Window.new(options)
         FillDirection = Enum.FillDirection.Horizontal,
     })
 
-    -- ⚠️ FIX: ContentContainer gets ZIndex 1 (above background)
     self.ContentContainer = New("Frame", self.MainFrame, {
         Name = "ContentContainer",
         BackgroundTransparency = 1,
@@ -835,7 +854,6 @@ function Window.new(options)
     self.Tabs = {}
     self.ActiveTab = nil
 
-    -- Global keybind listener (for user-defined keybinds)
     self.KeybindConnection = UserInputService.InputBegan:Connect(function(input, processed)
         if processed then return end
         if input.UserInputType == Enum.UserInputType.Keyboard then
@@ -846,7 +864,6 @@ function Window.new(options)
         end
     end)
 
-    -- Built‑in toggle keybind
     if self.ToggleKey then
         self.ToggleConnection = UserInputService.InputBegan:Connect(function(input, processed)
             if processed then return end
