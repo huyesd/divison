@@ -1,5 +1,11 @@
 --[[
-    Division UI Library – with tweening, watermark, no section stroke, content container repositioned
+    Division UI Library – Final
+    - Smooth drag (RunService.Heartbeat)
+    - CoreGui parent
+    - Auto‑unload on re‑inject
+    - Watermark (top‑left of screen)
+    - Dropdown fixed (no extra text)
+    - Tween fade in/out
 ]]
 
 local Division = {}
@@ -7,10 +13,10 @@ local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
 
--- ─────────────────────────────────────────────────────────────
---  Constants
--- ─────────────────────────────────────────────────────────────
+-- ─── Constants ────────────────────────────────────────────
 local COLORS = {
     Background = Color3.fromRGB(13, 13, 13),
     TopBar = Color3.fromRGB(13, 13, 13),
@@ -34,14 +40,10 @@ local TAB_HEIGHT = 19
 local ITEM_HEIGHT = 8
 local LABEL_HEIGHT = 10
 
--- ─────────────────────────────────────────────────────────────
---  Utility
--- ─────────────────────────────────────────────────────────────
+-- ─── Utility ──────────────────────────────────────────────
 local function New(className, parent, properties)
     local inst = Instance.new(className)
-    for prop, val in pairs(properties or {}) do
-        inst[prop] = val
-    end
+    for prop, val in pairs(properties or {}) do inst[prop] = val end
     inst.Parent = parent
     return inst
 end
@@ -62,9 +64,7 @@ local function Color3ToHex(c)
     )
 end
 
--- ─────────────────────────────────────────────────────────────
---  Section class – NO STROKE
--- ─────────────────────────────────────────────────────────────
+-- ─── Section class (no stroke) ──────────────────────────
 local Section = {}
 Section.__index = Section
 
@@ -78,7 +78,6 @@ function Section.new(tab, name, side)
         Size = UDim2.new(1, 0, 0, 20),
         BorderSizePixel = 0,
     })
-    -- ⚠️ No UIStroke here
 
     local itemsContainer = New("Frame", sectionFrame, {
         Name = "Items",
@@ -304,7 +303,7 @@ function Section:AddSlider(options)
     }
 end
 
--- ──────── Dropdown ────────
+-- ──────── Dropdown (FIXED) ────────
 function Section:AddDropdown(options)
     options = options or {}
     local text = options.Text or ""
@@ -315,31 +314,34 @@ function Section:AddDropdown(options)
     local row = New("Frame", self.ItemsContainer, {
         Name = "Dropdown",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 14),
+        Size = UDim2.new(1, 0, 0, 16),
         BorderSizePixel = 0,
         LayoutOrder = #self.ItemsContainer:GetChildren() + 1,
     })
 
-    local label = New("TextLabel", row, {
-        Name = "Text",
-        BackgroundTransparency = 1,
-        Text = text,
-        TextColor3 = COLORS.LabelColor,
-        FontFace = FONTS.Label,
-        TextScaled = true,
-        TextSize = 12,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Size = UDim2.new(0, 120, 0, 9),
-        Position = UDim2.new(0, 0, -0.1, 0),
-        LayoutOrder = 1,
-        BorderSizePixel = 0,
-    })
+    if text ~= "" then
+        local label = New("TextLabel", row, {
+            Name = "Text",
+            BackgroundTransparency = 1,
+            Text = text,
+            TextColor3 = COLORS.LabelColor,
+            FontFace = FONTS.Label,
+            TextScaled = true,
+            TextSize = 12,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Size = UDim2.new(0, 100, 0, 9),
+            Position = UDim2.new(0, 0, 0, 0),
+            LayoutOrder = 1,
+            BorderSizePixel = 0,
+        })
+    end
 
     local dropdownFrame = New("Frame", row, {
         Name = "DropdownFrame",
         BackgroundColor3 = COLORS.ToggleOff,
-        Size = UDim2.new(0, 120, 0, 10),
-        Position = UDim2.new(0.48, 0, 0.55, 0),
+        Size = UDim2.new(0, 120, 0, 12),
+        Position = UDim2.new(0, 0, 0.5, 0),
+        AnchorPoint = Vector2.new(0, 0.5),
         LayoutOrder = 2,
         BorderSizePixel = 0,
     })
@@ -369,8 +371,9 @@ function Section:AddDropdown(options)
         ScrollBarImageColor3 = Color3.new(0,0,0),
     })
     New("UIListLayout", itemsFrame, {
-        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+        HorizontalAlignment = Enum.HorizontalAlignment.Left,
         SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 2),
     })
 
     New("UIListLayout", row, {
@@ -401,9 +404,7 @@ function Section:AddDropdown(options)
             TextScaled = true,
             TextSize = 12,
             TextXAlignment = Enum.TextXAlignment.Left,
-            Size = UDim2.new(0.95, 0, -0.02849, 10),
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0.49, 0, 0.15243, 0),
+            Size = UDim2.new(0.95, 0, 0, 12),
             BorderSizePixel = 0,
             AutoButtonColor = false,
         })
@@ -417,7 +418,7 @@ function Section:AddDropdown(options)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             itemsFrame.Visible = not itemsFrame.Visible
             local count = #itemsFrame:GetChildren()
-            itemsFrame.Size = UDim2.new(0, 120, 0, math.min(count * 12, 50))
+            itemsFrame.Size = UDim2.new(0, 120, 0, math.min(count * 14, 50))
         end
     end)
 
@@ -765,7 +766,7 @@ function Section:AddColorPicker(options)
 end
 
 -- ─────────────────────────────────────────────────────────────
---  Window class – draggable, centered tabs, with tweening & watermark
+--  Window class – smooth drag + all features
 -- ─────────────────────────────────────────────────────────────
 local Window = {}
 Window.__index = Window
@@ -783,12 +784,31 @@ function Window.new(options)
     self.WatermarkText = options.Watermark or "Division 2.72 | NA | not connected | 75"
     self.ToggleKey = options.ToggleKey or Enum.KeyCode.RightShift
 
-    self.Gui = New("ScreenGui", Player:WaitForChild("PlayerGui"), {
+    -- Parent to CoreGui
+    self.Gui = New("ScreenGui", CoreGui, {
         Name = "DivisionUI",
-        Enabled = true, -- we'll control visibility via tween
+        Enabled = true,
         ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
     })
 
+    -- Watermark (top-left, independent of window)
+    self.WatermarkLabel = New("TextLabel", self.Gui, {
+        Name = "Watermark",
+        BackgroundTransparency = 1,
+        Text = self.WatermarkText,
+        TextColor3 = Color3.fromRGB(180, 180, 180),
+        FontFace = FONTS.Default,
+        TextScaled = false,
+        TextSize = 11,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Top,
+        Size = UDim2.new(0, 300, 0, 14),
+        Position = UDim2.new(0, 10, 0, 10),
+        AnchorPoint = Vector2.new(0, 0),
+        ZIndex = 10,
+    })
+
+    -- Main frame
     self.MainFrame = New("Frame", self.Gui, {
         Name = "Main",
         BackgroundTransparency = 1,
@@ -798,7 +818,7 @@ function Window.new(options)
         BorderSizePixel = 0,
     })
 
-    -- Background (solid) – will be tweened for fade effect
+    -- Background (fade)
     self.Background = New("Frame", self.MainFrame, {
         Name = "Background",
         ZIndex = 0,
@@ -807,10 +827,10 @@ function Window.new(options)
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.new(0.5, 0, 0.5, 0),
         BorderSizePixel = 0,
-        BackgroundTransparency = 1, -- start hidden
+        BackgroundTransparency = 1,
     })
 
-    -- Top bar – draggable
+    -- Top bar (draggable)
     self.TopBar = New("Frame", self.MainFrame, {
         Name = "Top",
         ZIndex = 1,
@@ -836,10 +856,11 @@ function Window.new(options)
         Position = UDim2.new(0.5, 0, 0.45, 0),
         AnchorPoint = Vector2.new(0.5, 0.5),
         BorderSizePixel = 0,
+        TextTransparency = 1,
     })
     New("UITextSizeConstraint", self.TitleLabel)
 
-    -- Tabs container – centered
+    -- Tabs container (centered)
     self.TabsContainer = New("Frame", self.MainFrame, {
         Name = "TabsContainer",
         BackgroundTransparency = 1,
@@ -848,83 +869,65 @@ function Window.new(options)
         AnchorPoint = Vector2.new(0.5, 0),
         ZIndex = 1,
     })
-    local tabsLayout = New("UIListLayout", self.TabsContainer, {
+    New("UIListLayout", self.TabsContainer, {
         Padding = UDim.new(0, 2),
         SortOrder = Enum.SortOrder.LayoutOrder,
         FillDirection = Enum.FillDirection.Horizontal,
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
     })
 
-    -- Content container – repositioned to {0.5, 0}, {0, 43} with anchor (0.5, 0)
+    -- Content container (starts at Y=43)
     self.ContentContainer = New("Frame", self.MainFrame, {
         Name = "ContentContainer",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 1, -43),  -- fill from y=43 to bottom
+        Size = UDim2.new(1, 0, 1, -43),
         Position = UDim2.new(0.5, 0, 0, 43),
         AnchorPoint = Vector2.new(0.5, 0),
         ZIndex = 1,
     })
 
-    -- Watermark (top-left)
-    self.WatermarkLabel = New("TextLabel", self.MainFrame, {
-        Name = "Watermark",
-        BackgroundTransparency = 1,
-        Text = self.WatermarkText,
-        TextColor3 = Color3.fromRGB(180, 180, 180),
-        FontFace = FONTS.Default,
-        TextScaled = false,
-        TextSize = 11,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextYAlignment = Enum.TextYAlignment.Top,
-        Size = UDim2.new(0, 300, 0, 14),
-        Position = UDim2.new(0, 6, 0, 6),
-        AnchorPoint = Vector2.new(0, 0),
-        ZIndex = 2,
-    })
-
     self.Tabs = {}
     self.ActiveTab = nil
 
-    -- Dragging logic
-    local dragging = false
-    local dragStart, startPos
+    -- ─── SMOOTHER DRAG ──────────────────────────────────
+    local dragData = { active = false, startMouse = nil, startPos = nil, connection = nil }
 
-    local function updatePosition(input)
-        local delta = input.Position - dragStart
+    local function updateDrag()
+        if not dragData.active then return end
+        local mousePos = UserInputService:GetMouseLocation()
+        local delta = mousePos - dragData.startMouse
         self.MainFrame.Position = UDim2.new(
-            0.5, startPos.X.Offset + delta.X,
-            0.5, startPos.Y.Offset + delta.Y
+            0.5, dragData.startPos.X.Offset + delta.X,
+            0.5, dragData.startPos.Y.Offset + delta.Y
         )
     end
 
     self.TopBar.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = self.MainFrame.Position
+            dragData.active = true
+            dragData.startMouse = UserInputService:GetMouseLocation()
+            dragData.startPos = self.MainFrame.Position
+            if dragData.connection then dragData.connection:Disconnect() end
+            dragData.connection = RunService.Heartbeat:Connect(updateDrag)
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
+                    dragData.active = false
+                    if dragData.connection then
+                        dragData.connection:Disconnect()
+                        dragData.connection = nil
+                    end
                 end
             end)
         end
     end)
 
-    self.TopBar.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            updatePosition(input)
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            updatePosition(input)
-        end
-    end)
-
     UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
+            dragData.active = false
+            if dragData.connection then
+                dragData.connection:Disconnect()
+                dragData.connection = nil
+            end
         end
     end)
 
@@ -933,9 +936,7 @@ function Window.new(options)
         if processed then return end
         if input.UserInputType == Enum.UserInputType.Keyboard then
             local callback = self.Keybinds[input.KeyCode]
-            if callback then
-                callback()
-            end
+            if callback then callback() end
         end
     end)
 
@@ -948,20 +949,12 @@ function Window.new(options)
         end)
     end
 
-    -- Initial tween to show if AutoShow
-    if self.AutoShow then
-        self:FadeIn()
-    else
-        self.Background.BackgroundTransparency = 1
-        self.TopBar.BackgroundTransparency = 1
-        self.TitleLabel.TextTransparency = 1
-        -- hide content?
-    end
+    if self.AutoShow then self:FadeIn() end
 
     return self
 end
 
--- ───── Fade In/Out ─────
+-- ─── Tween methods ──────────────────────────────────────
 function Window:FadeIn()
     if not self.Gui.Enabled then return end
     local tweenInfo = TweenInfo.new(self.MenuFadeTime or 0.2, Enum.EasingStyle.Linear)
@@ -984,19 +977,12 @@ function Window:FadeOut()
     bgTween:Play()
     topTween:Play()
     titleTween:Play()
-    -- Wait and disable GUI
     task.wait(self.MenuFadeTime or 0.2)
     self.Gui.Enabled = false
 end
 
 function Window:ToggleVisibility()
-    if self.Gui.Enabled then
-        -- currently visible, fade out
-        self:FadeOut()
-    else
-        self.Gui.Enabled = true
-        self:FadeIn()
-    end
+    if self.Gui.Enabled then self:FadeOut() else self.Gui.Enabled = true self:FadeIn() end
 end
 
 function Window:Show()
@@ -1008,13 +994,12 @@ function Window:Hide()
     self:FadeOut()
 end
 
--- ───── Watermark setter ─────
 function Window:SetWatermark(text)
     self.WatermarkText = text
     self.WatermarkLabel.Text = text
 end
 
--- ───── CreateTab ─────
+-- ─── CreateTab ──────────────────────────────────────────
 function Window:CreateTab(name, isDefault)
     local button = New("TextButton", self.TabsContainer, {
         Name = name,
@@ -1053,7 +1038,7 @@ function Window:CreateTab(name, isDefault)
         BackgroundTransparency = 1,
         Size = UDim2.new(0.5, -2, 1, 0),
     })
-    local leftLayout = New("UIListLayout", leftPanel, {
+    New("UIListLayout", leftPanel, {
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
         Padding = UDim.new(0, 2),
         SortOrder = Enum.SortOrder.LayoutOrder,
@@ -1065,7 +1050,7 @@ function Window:CreateTab(name, isDefault)
         Size = UDim2.new(0.5, -2, 1, 0),
         Position = UDim2.new(0.5, 0, 0, 0),
     })
-    local rightLayout = New("UIListLayout", rightPanel, {
+    New("UIListLayout", rightPanel, {
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
         Padding = UDim.new(0, 10),
         SortOrder = Enum.SortOrder.LayoutOrder,
@@ -1077,8 +1062,6 @@ function Window:CreateTab(name, isDefault)
         Content = content,
         LeftPanel = leftPanel,
         RightPanel = rightPanel,
-        LeftLayout = leftLayout,
-        RightLayout = rightLayout,
         Sections = {},
         Window = self,
         CreateSection = function(self, name, side)
@@ -1113,10 +1096,16 @@ function Window:Destroy()
 end
 
 -- ─────────────────────────────────────────────────────────────
---  Library entry
+--  Library entry (auto‑unload)
 -- ─────────────────────────────────────────────────────────────
 function Division:CreateWindow(options)
-    return Window.new(options)
+    if _G.DivisionUI_Window then
+        _G.DivisionUI_Window:Destroy()
+        _G.DivisionUI_Window = nil
+    end
+    local window = Window.new(options)
+    _G.DivisionUI_Window = window
+    return window
 end
 
 return Division
