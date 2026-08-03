@@ -3,10 +3,10 @@
     - Keybinds with mouse support & modes (Toggle/Hold/Always)
     - Auto‑sizing key buttons + hover effect
     - IgnoreGuiInset
-    - Dropdown ZIndex fixed (no clipping)
+    - Dropdown ZIndex fixed
     - Tweened toggles & sliders
     - AddButton
-    - Auto‑generated Settings tab
+    - Manual Settings tab (call :CreateSettingsTab() after your tabs)
     - Smooth drag
 ]]
 
@@ -672,7 +672,6 @@ function Window.new(options)
     self.Keybinds = {}
     self.WatermarkText = options.Watermark or "Division 2.72 | NA | not connected | 75"
     self.ToggleKey = options.ToggleKey or Enum.KeyCode.RightShift
-    self.CreateSettingsTab = options.CreateSettingsTab ~= false
 
     self.Gui = New("ScreenGui", CoreGui, {
         Name = "DivisionUI",
@@ -881,20 +880,16 @@ function Window.new(options)
         end)
     end
 
-    -- Auto‑create Settings tab
-    if self.CreateSettingsTab then
-        self:CreateDefaultSettingsTab()
-    end
-
     if self.AutoShow then self:FadeIn() end
 
     return self
 end
 
--- ─── Default Settings tab ──────────────────────────────
-function Window:CreateDefaultSettingsTab()
+-- ─── Manual Settings tab creator ──────────────────────
+function Window:CreateSettingsTab()
     local settingsTab = self:CreateTab("Settings", false)
 
+    -- Left panel: Configs
     local configSection = settingsTab:CreateSection("Configs", "Left")
     configSection:AddDropdown({
         Text = "",
@@ -905,45 +900,18 @@ function Window:CreateDefaultSettingsTab()
     configSection:AddButton({ Text = "Save", Callback = function() print("Save config") end })
     configSection:AddButton({ Text = "Reset", Callback = function() print("Reset config") end })
 
-    local miscSection = settingsTab:CreateSection("Misc", "Right")
-    miscSection:AddDropdown({
-        Text = "ESP Font",
-        Values = {"Division", "Arial", "Comic Sans"},
-        Default = "Division",
-    })
-    miscSection:AddDropdown({
-        Text = "Crosshair",
-        Values = {"Normal", "Dot", "Cross"},
-        Default = "Normal",
-    })
-    miscSection:AddKeybind({
-        Text = "Custom Watermark",
-        Default = "F3",
-        Mode = "Toggle",
-        Callback = function(state) print("Watermark:", state) end
-    })
-    miscSection:AddKeybind({
+    -- Right panel: Menu Key
+    local menuSection = settingsTab:CreateSection("Menu", "Right")
+    menuSection:AddKeybind({
         Text = "Menu Key",
         Default = "RightShift",
         Mode = "Toggle",
-        Callback = function(state) if state then self:ToggleVisibility() end end
+        Callback = function(state)
+            if state then self:ToggleVisibility() end
+        end
     })
-    miscSection:AddDropdown({
-        Text = "Combat Mode",
-        Values = {"Normal", "Aggressive", "Defensive"},
-        Default = "Normal",
-    })
-    miscSection:AddToggle({ Text = "Prefab ESP (Debug)", Default = false })
-    miscSection:AddToggle({ Text = "Cheat Indicators", Default = false })
-    miscSection:AddToggle({ Text = "Desync Indicator", Default = false })
-    miscSection:AddToggle({ Text = "Reload Indicator", Default = false })
-    miscSection:AddToggle({ Text = "Flip Icons", Default = false })
-    miscSection:AddKeybind({
-        Text = "Panic Button",
-        Default = "P",
-        Mode = "Toggle",
-        Callback = function(state) if state then print("PANIC!") end end
-    })
+
+    return settingsTab
 end
 
 -- ─── Tween methods ──────────────────────────────────────
