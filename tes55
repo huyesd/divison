@@ -1,5 +1,5 @@
 --[[
-    Division UI Library – draggable, centered tabs, proper section alignment
+    Division UI Library – sections fixed, no auto‑unload
 ]]
 
 local Division = {}
@@ -62,7 +62,7 @@ local function Color3ToHex(c)
 end
 
 -- ─────────────────────────────────────────────────────────────
---  Section class
+--  Section class – fixed to display properly
 -- ─────────────────────────────────────────────────────────────
 local Section = {}
 Section.__index = Section
@@ -71,24 +71,32 @@ function Section.new(tab, name, side)
     side = side or "Left"
     local panel = (side == "Left") and tab.LeftPanel or tab.RightPanel
 
+    -- Section frame: fills the panel width, height auto-adjusted
     local sectionFrame = New("Frame", panel, {
         Name = name,
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 1, 0),  -- fill the panel
+        Size = UDim2.new(1, 0, 0, 0),  -- height will be updated
         BorderSizePixel = 0,
     })
-    New("UIStroke", sectionFrame, { Color = COLORS.Border })
+    -- Border
+    local stroke = New("UIStroke", sectionFrame, {
+        Color = COLORS.Border,
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+    })
 
+    -- Inner container with padding
     local itemsContainer = New("Frame", sectionFrame, {
         Name = "Items",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, -10, 1, -8),
+        Size = UDim2.new(1, -12, 1, -10),
         Position = UDim2.new(0.5, 0, 0.5, 0),
         AnchorPoint = Vector2.new(0.5, 0.5),
         BorderSizePixel = 0,
     })
+
+    -- Layout: left‑aligned, items take full width
     local itemsLayout = New("UIListLayout", itemsContainer, {
-        HorizontalAlignment = Enum.HorizontalAlignment.Left,  -- left‑align items
+        HorizontalAlignment = Enum.HorizontalAlignment.Left,
         Padding = UDim.new(0, 4),
         SortOrder = Enum.SortOrder.LayoutOrder,
     })
@@ -104,19 +112,26 @@ function Section.new(tab, name, side)
     }
     setmetatable(selfObj, Section)
 
+    -- Update section height when children change
     local function updateSize()
         local totalHeight = 0
-        for _, child in ipairs(itemsContainer:GetChildren()) do
+        local children = itemsContainer:GetChildren()
+        for _, child in ipairs(children) do
             if child:IsA("GuiObject") and child.Visible then
                 totalHeight = totalHeight + child.Size.Y.Offset + itemsLayout.Padding.Offset
             end
         end
+        -- Add some padding at bottom
         totalHeight = totalHeight + itemsLayout.Padding.Offset * 2
-        sectionFrame.Size = UDim2.new(1, 0, 0, totalHeight + 12)
+        sectionFrame.Size = UDim2.new(1, 0, 0, totalHeight + 10)
     end
 
     itemsContainer.ChildAdded:Connect(updateSize)
     itemsContainer.ChildRemoved:Connect(updateSize)
+    -- Initial update after a small delay to let children settle
+    task.wait(0.01)
+    updateSize()
+
     return selfObj
 end
 
@@ -760,7 +775,7 @@ function Section:AddColorPicker(options)
 end
 
 -- ─────────────────────────────────────────────────────────────
---  Window class – now draggable and with centered tabs
+--  Window class – draggable, centered tabs
 -- ─────────────────────────────────────────────────────────────
 local Window = {}
 Window.__index = Window
@@ -803,7 +818,7 @@ function Window.new(options)
         BorderSizePixel = 0,
     })
 
-    -- Top bar (draggable)
+    -- Top bar – draggable
     self.TopBar = New("Frame", self.MainFrame, {
         Name = "Top",
         ZIndex = 1,
@@ -831,7 +846,7 @@ function Window.new(options)
     })
     New("UITextSizeConstraint", self.TitleLabel)
 
-    -- Tabs container (centered)
+    -- Tabs container – centered
     self.TabsContainer = New("Frame", self.MainFrame, {
         Name = "TabsContainer",
         BackgroundTransparency = 1,
@@ -840,12 +855,11 @@ function Window.new(options)
         AnchorPoint = Vector2.new(0.5, 0),
         ZIndex = 1,
     })
-    -- A UIListLayout inside to center the tabs
     local tabsLayout = New("UIListLayout", self.TabsContainer, {
         Padding = UDim.new(0, 2),
         SortOrder = Enum.SortOrder.LayoutOrder,
         FillDirection = Enum.FillDirection.Horizontal,
-        HorizontalAlignment = Enum.HorizontalAlignment.Center,  -- center the tabs
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
     })
 
     -- Content container
@@ -860,9 +874,9 @@ function Window.new(options)
     self.Tabs = {}
     self.ActiveTab = nil
 
-    -- ─── Dragging logic ───
+    -- Dragging logic
     local dragging = false
-    local dragInput, dragStart, startPos
+    local dragStart, startPos
 
     local function updatePosition(input)
         local delta = input.Position - dragStart
@@ -891,7 +905,6 @@ function Window.new(options)
         end
     end)
 
-    -- Also listen globally for mouse movement to keep dragging smooth even if mouse leaves topbar
     UserInputService.InputChanged:Connect(function(input)
         if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
             updatePosition(input)
@@ -904,7 +917,7 @@ function Window.new(options)
         end
     end)
 
-    -- ─── Global keybind listener ───
+    -- Keybinds
     self.KeybindConnection = UserInputService.InputBegan:Connect(function(input, processed)
         if processed then return end
         if input.UserInputType == Enum.UserInputType.Keyboard then
@@ -915,7 +928,6 @@ function Window.new(options)
         end
     end)
 
-    -- Built‑in toggle keybind
     if self.ToggleKey then
         self.ToggleConnection = UserInputService.InputBegan:Connect(function(input, processed)
             if processed then return end
@@ -1029,23 +1041,13 @@ function Window:Destroy()
     if self.KeybindConnection then self.KeybindConnection:Disconnect() end
     if self.ToggleConnection then self.ToggleConnection:Disconnect() end
     self.Gui:Destroy()
-    if _G.DivisionUI_Window == self then
-        _G.DivisionUI_Window = nil
-    end
 end
 
 -- ─────────────────────────────────────────────────────────────
---  Library entry – with auto‑unload
+--  Library entry – no auto‑unload (you can manually destroy)
 -- ─────────────────────────────────────────────────────────────
 function Division:CreateWindow(options)
-    if _G.DivisionUI_Window then
-        _G.DivisionUI_Window:Destroy()
-        _G.DivisionUI_Window = nil
-    end
-
-    local window = Window.new(options)
-    _G.DivisionUI_Window = window
-    return window
+    return Window.new(options)
 end
 
 return Division
