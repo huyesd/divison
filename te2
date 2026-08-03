@@ -1,5 +1,9 @@
 --[[
-    Division UI Library – ImGui style (clean, compact, properly scaled)
+    Division UI Library – Full Settings (FIXED)
+    - Flags stored in Library.Flags
+    - Config name textbox works
+    - Consistent text scaling (TextScaled = true)
+    - All features included
 ]]
 
 local Division = {}
@@ -13,60 +17,82 @@ local HttpService = game:GetService("HttpService")
 
 -- ─── Constants ──────────────────────────────────────────────
 local COLORS = {
-    Background = Color3.fromRGB(18, 18, 20),
-    TopBar = Color3.fromRGB(24, 24, 28),
-    Border = Color3.fromRGB(40, 40, 45),
-    Accent = Color3.fromRGB(88, 186, 255),
-    Text = Color3.fromRGB(235, 235, 240),
-    DimText = Color3.fromRGB(160, 160, 170),
-    Inline = Color3.fromRGB(30, 30, 35),
-    Content = Color3.fromRGB(25, 25, 28),
-    Outline = Color3.fromRGB(50, 50, 55),
-    Hovered = Color3.fromRGB(45, 45, 52),
+    Background = Color3.fromRGB(13, 13, 13),
+    TopBar = Color3.fromRGB(13, 13, 13),
+    Border = Color3.fromRGB(32, 32, 32),
+    Accent = Color3.fromRGB(55, 225, 237),
+    Text = Color3.fromRGB(255, 255, 255),
+    DimText = Color3.fromRGB(144, 144, 144),
+    ToggleOff = Color3.fromRGB(31, 31, 31),
+    ToggleOn = Color3.fromRGB(55, 225, 237),
+    LabelColor = Color3.fromRGB(150, 150, 150),
+    DropdownBg = Color3.fromRGB(31, 31, 31),
+    Inline = Color3.fromRGB(22, 22, 22),
+    Content = Color3.fromRGB(21, 21, 21),
+    Outline1 = Color3.fromRGB(35, 35, 35),
+    Outline2 = Color3.fromRGB(30, 30, 30),
+    Outline3 = Color3.fromRGB(15, 15, 15),
+    Outline4 = Color3.fromRGB(10, 10, 10),
+    Hovered = Color3.fromRGB(35, 35, 35),
 }
 
 local FONTS = {
-    Default = Font.new("rbxasset://fonts/families/Roboto.json", Enum.FontWeight.Medium, Enum.FontStyle.Normal),
-    Bold = Font.new("rbxasset://fonts/families/Roboto.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
+    Default = Font.new("rbxasset://fonts/families/RobotoMono.json", Enum.FontWeight.Medium, Enum.FontStyle.Normal),
+    Bold = Font.new("rbxasset://fonts/families/RobotoMono.json", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal),
+    Label = Font.new("rbxasset://fonts/families/RobotoMono.json", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal),
 }
 
-local WINDOW_SIZE = UDim2.new(0, 520, 0, 350)
-local TAB_HEIGHT = 20
-local FONT_SIZE = 13
+local WINDOW_SIZE = UDim2.new(0, 600, 0, 375)
+local TAB_HEIGHT = 19
+local ITEM_HEIGHT = 8
+local LABEL_HEIGHT = 10
+local BUTTON_HEIGHT = 14
 
--- ─── Theme (for settings) ──────────────────────────────────
+-- ─── Theme table ──────────────────────────────────────────────
 Division.Theme = {
     Background = COLORS.Background,
     Inline = COLORS.Inline,
     Content = COLORS.Content,
     Text = COLORS.Text,
-    Outline = COLORS.Outline,
+    Outline1 = COLORS.Outline1,
+    Outline2 = COLORS.Outline2,
+    Outline3 = COLORS.Outline3,
+    Outline4 = COLORS.Outline4,
     InactiveText = COLORS.DimText,
     Accent = COLORS.Accent,
     Hovered = COLORS.Hovered,
 }
 
--- ─── Flags ──────────────────────────────────────────────────
+-- ─── Flags (global) ──────────────────────────────────────────
 Division.Flags = {}
 Division.SetFlags = {}
 
--- ─── Theming system ──────────────────────────────────────
+-- ─── Theming system ──────────────────────────────────────────
 local ThemingStuff = {}
+local ThemeMap = {}
 
 function Division.AddToTheme(obj, properties)
+    local data = { Item = obj, Properties = properties }
     for prop, val in pairs(properties) do
         if type(val) == "string" and Division.Theme[val] then
             obj[prop] = Division.Theme[val]
+        elseif type(val) == "function" then
+            obj[prop] = val()
         end
     end
-    table.insert(ThemingStuff, { Item = obj, Properties = properties })
+    table.insert(ThemingStuff, data)
+    ThemeMap[obj] = data
 end
 
-function Division.ChangeTheme(key, color)
-    Division.Theme[key] = color
+function Division.ChangeTheme(colorName, color)
+    Division.Theme[colorName] = color
     for _, data in ipairs(ThemingStuff) do
         for prop, val in pairs(data.Properties) do
-            if val == key then data.Item[prop] = color end
+            if type(val) == "string" and val == colorName then
+                data.Item[prop] = color
+            elseif type(val) == "function" then
+                data.Item[prop] = val()
+            end
         end
     end
 end
@@ -77,13 +103,19 @@ if not isfolder("Division") then makefolder("Division") end
 if not isfolder(ConfigsFolder) then makefolder(ConfigsFolder) end
 
 function Division.GetConfig()
-    return HttpService:JSONEncode(Division.Flags)
+    local config = {}
+    for key, value in pairs(Division.Flags) do
+        config[key] = value
+    end
+    return HttpService:JSONEncode(config)
 end
 
 function Division.LoadConfig(json)
     local data = HttpService:JSONDecode(json)
     for key, value in pairs(data) do
-        if Division.SetFlags[key] then Division.SetFlags[key](value) end
+        if Division.SetFlags[key] then
+            Division.SetFlags[key](value)
+        end
     end
 end
 
@@ -98,14 +130,14 @@ function Division.GetConfigsList()
     return list
 end
 
--- ─── Key display ──────────────────────────────────────────
+-- ─── Key display names ──────────────────────────────────────
 local KEY_DISPLAY_NAMES = {
-    RightShift = "Right Shift",
-    LeftShift = "Left Shift",
-    RightControl = "Right Ctrl",
-    LeftControl = "Left Ctrl",
-    RightAlt = "Right Alt",
-    LeftAlt = "Left Alt",
+    RightShift = "RightShift",
+    LeftShift = "LeftShift",
+    RightControl = "RightCtrl",
+    LeftControl = "LeftCtrl",
+    RightAlt = "RightAlt",
+    LeftAlt = "LeftAlt",
     Mouse2 = "Mouse2",
     Mouse3 = "Mouse3",
     X1 = "X1",
@@ -123,15 +155,22 @@ end
 
 local function HexToColor3(hex)
     hex = hex:gsub("#", "")
-    return Color3.fromRGB(tonumber(hex:sub(1,2), 16), tonumber(hex:sub(3,4), 16), tonumber(hex:sub(5,6), 16))
+    local r = tonumber(hex:sub(1,2), 16) or 255
+    local g = tonumber(hex:sub(3,4), 16) or 255
+    local b = tonumber(hex:sub(5,6), 16) or 255
+    return Color3.fromRGB(r, g, b)
 end
 
 local function Color3ToHex(c)
-    return string.format("#%02X%02X%02X", math.floor(c.R*255), math.floor(c.G*255), math.floor(c.B*255))
+    return string.format("#%02X%02X%02X",
+        math.floor(c.R * 255),
+        math.floor(c.G * 255),
+        math.floor(c.B * 255)
+    )
 end
 
 local function tweenProperty(obj, prop, target, duration)
-    duration = duration or 0.12
+    duration = duration or 0.15
     local tween = TweenService:Create(obj, TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { [prop] = target })
     tween:Play()
     return tween
@@ -165,15 +204,6 @@ function Section.new(tab, name, side)
         Size = UDim2.new(1, 0, 0, 20),
         BorderSizePixel = 0,
     })
-    -- separator line
-    New("Frame", sectionFrame, {
-        Name = "Line",
-        BackgroundColor3 = Division.Theme.Outline,
-        Size = UDim2.new(1, 0, 0, 1),
-        Position = UDim2.new(0, 0, 0, 0),
-        BorderSizePixel = 0,
-        ZIndex = 1,
-    })
 
     local itemsContainer = New("Frame", sectionFrame, {
         Name = "Items",
@@ -189,6 +219,8 @@ function Section.new(tab, name, side)
         SortOrder = Enum.SortOrder.LayoutOrder,
     })
 
+    local elementIndex = 0
+
     local selfObj = {
         Name = name,
         Frame = sectionFrame,
@@ -196,6 +228,7 @@ function Section.new(tab, name, side)
         Layout = itemsLayout,
         Tab = tab,
         Side = side,
+        Elements = {},
         _elementIndex = 0,
     }
     setmetatable(selfObj, Section)
@@ -209,7 +242,7 @@ function Section.new(tab, name, side)
             end
         end
         totalHeight = totalHeight + itemsLayout.Padding.Offset * 2
-        sectionFrame.Size = UDim2.new(1, 0, 0, math.max(totalHeight + 10, 24))
+        sectionFrame.Size = UDim2.new(1, 0, 0, math.max(totalHeight + 10, 20))
     end
 
     itemsContainer.ChildAdded:Connect(updateSize)
@@ -229,11 +262,11 @@ function Section:AddLabel(text)
         BackgroundTransparency = 1,
         Text = text,
         TextColor3 = Division.Theme.InactiveText,
-        FontFace = FONTS.Default,
-        TextScaled = false,
-        TextSize = FONT_SIZE,
+        FontFace = FONTS.Label,
+        TextScaled = true,
+        TextSize = 12,
         TextXAlignment = Enum.TextXAlignment.Left,
-        Size = UDim2.new(1, 0, 0, 14),
+        Size = UDim2.new(1, 0, 0, LABEL_HEIGHT),
         BorderSizePixel = 0,
         LayoutOrder = #self.ItemsContainer:GetChildren() + 1,
         ZIndex = z,
@@ -255,7 +288,7 @@ function Section:AddToggle(options)
     local row = New("TextButton", self.ItemsContainer, {
         Name = "Toggle",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 16),
+        Size = UDim2.new(1, 0, 0, ITEM_HEIGHT),
         BorderSizePixel = 0,
         Text = "",
         AutoButtonColor = false,
@@ -280,11 +313,11 @@ function Section:AddToggle(options)
         Text = text,
         TextColor3 = Division.Theme.Text,
         FontFace = FONTS.Default,
-        TextScaled = false,
-        TextSize = FONT_SIZE,
+        TextScaled = true,
+        TextSize = 14,
         TextXAlignment = Enum.TextXAlignment.Left,
-        Size = UDim2.new(1, -16, 0, 16),
-        Position = UDim2.new(0, 16, 0.5, -1),
+        Size = UDim2.new(1, -16, 0, 9),
+        Position = UDim2.new(0, 16, 0.5, -4.5),
         BorderSizePixel = 0,
         ZIndex = z,
     })
@@ -324,7 +357,7 @@ function Section:AddSlider(options)
     local row = New("Frame", self.ItemsContainer, {
         Name = "Slider",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 22),
+        Size = UDim2.new(1, 0, 0, 16),
         BorderSizePixel = 0,
         LayoutOrder = #self.ItemsContainer:GetChildren() + 1,
         ZIndex = z,
@@ -336,10 +369,10 @@ function Section:AddSlider(options)
         Text = text .. ": " .. tostring(default),
         TextColor3 = Division.Theme.Text,
         FontFace = FONTS.Default,
-        TextScaled = false,
-        TextSize = FONT_SIZE,
+        TextScaled = true,
+        TextSize = 14,
         TextXAlignment = Enum.TextXAlignment.Left,
-        Size = UDim2.new(1, 0, 0, 14),
+        Size = UDim2.new(1, 0, 0, 9),
         Position = UDim2.new(0, 0, 0, 0),
         BorderSizePixel = 0,
         ZIndex = z,
@@ -350,8 +383,8 @@ function Section:AddSlider(options)
         Name = "SliderOuter",
         BackgroundColor3 = Division.Theme.Inline,
         ClipsDescendants = true,
-        Size = UDim2.new(1, 0, 0, 4),
-        Position = UDim2.new(0, 0, 0.68, 0),
+        Size = UDim2.new(1, 0, 0, 6),
+        Position = UDim2.new(0, 0, 0.57143, 0),
         BorderSizePixel = 0,
         ZIndex = z,
     })
@@ -360,7 +393,7 @@ function Section:AddSlider(options)
     local sliderFill = New("Frame", sliderOuter, {
         BackgroundColor3 = Division.Theme.Accent,
         Size = UDim2.new(1, 0, 1, 0),
-        Position = UDim2.new(0, 0, 0, 0),
+        Position = UDim2.new(0.007, 0, 0, 0),
         BorderSizePixel = 0,
         ZIndex = z,
     })
@@ -408,7 +441,7 @@ function Section:AddSlider(options)
     }
 end
 
--- ─── AddDropdown ──────────────────────────────────────────
+-- ─── AddDropdown (transparent backgrounds) ───────────────
 function Section:AddDropdown(options)
     options = options or {}
     local text = options.Text or ""
@@ -422,7 +455,7 @@ function Section:AddDropdown(options)
     local row = New("Frame", self.ItemsContainer, {
         Name = "Dropdown",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 20),
+        Size = UDim2.new(1, 0, 0, 16),
         BorderSizePixel = 0,
         LayoutOrder = #self.ItemsContainer:GetChildren() + 1,
         ZIndex = z,
@@ -433,24 +466,23 @@ function Section:AddDropdown(options)
             Name = "Text",
             BackgroundTransparency = 1,
             Text = text,
-            TextColor3 = Division.Theme.Text,
-            FontFace = FONTS.Default,
-            TextScaled = false,
-            TextSize = FONT_SIZE,
+            TextColor3 = Division.Theme.InactiveText,
+            FontFace = FONTS.Label,
+            TextScaled = true,
+            TextSize = 12,
             TextXAlignment = Enum.TextXAlignment.Left,
-            Size = UDim2.new(0, 100, 0, 14),
-            Position = UDim2.new(0, 0, 0.5, -7),
+            Size = UDim2.new(0, 100, 0, 9),
+            Position = UDim2.new(0, 0, 0.5, -4.5),
             BorderSizePixel = 0,
             ZIndex = z,
         })
-        Division.AddToTheme(label, { TextColor3 = "Text" })
+        Division.AddToTheme(label, { TextColor3 = "InactiveText" })
     end
 
-    -- transparent dropdown background
     local dropdownFrame = New("Frame", row, {
         Name = "DropdownFrame",
         BackgroundTransparency = 1,
-        Size = UDim2.new(0, 120, 0, 16),
+        Size = UDim2.new(0, 120, 0, 12),
         Position = UDim2.new(0, (text ~= "" and 110 or 0), 0.5, 0),
         AnchorPoint = Vector2.new(0, 0.5),
         BorderSizePixel = 0,
@@ -463,8 +495,8 @@ function Section:AddDropdown(options)
         Text = default,
         TextColor3 = Division.Theme.Text,
         FontFace = FONTS.Default,
-        TextScaled = false,
-        TextSize = FONT_SIZE,
+        TextScaled = true,
+        TextSize = 12,
         TextXAlignment = Enum.TextXAlignment.Left,
         Size = UDim2.new(0.9, 0, 0.9, 0),
         Position = UDim2.new(0.48, 0, 0.5, 0),
@@ -478,7 +510,7 @@ function Section:AddDropdown(options)
         Name = "ItemsFrame",
         Visible = false,
         Active = true,
-        BackgroundColor3 = Division.Theme.Background,
+        BackgroundTransparency = 1,
         Size = UDim2.new(0, 120, 0, 30),
         Position = UDim2.new(0, 0, 0.97, 0),
         BorderSizePixel = 0,
@@ -486,7 +518,6 @@ function Section:AddDropdown(options)
         ZIndex = z + 20,
         ClipsDescendants = false,
     })
-    Division.AddToTheme(itemsFrame, { BackgroundColor3 = "Background" })
     New("UIListLayout", itemsFrame, {
         HorizontalAlignment = Enum.HorizontalAlignment.Left,
         SortOrder = Enum.SortOrder.LayoutOrder,
@@ -512,10 +543,10 @@ function Section:AddDropdown(options)
             TextColor3 = (val == default) and Division.Theme.Accent or Division.Theme.InactiveText,
             BackgroundTransparency = 1,
             FontFace = FONTS.Default,
-            TextScaled = false,
-            TextSize = FONT_SIZE,
+            TextScaled = true,
+            TextSize = 12,
             TextXAlignment = Enum.TextXAlignment.Left,
-            Size = UDim2.new(0.95, 0, 0, 14),
+            Size = UDim2.new(0.95, 0, 0, 12),
             BorderSizePixel = 0,
             AutoButtonColor = false,
             ZIndex = z + 20,
@@ -537,7 +568,7 @@ function Section:AddDropdown(options)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             itemsFrame.Visible = not itemsFrame.Visible
             local count = #itemsFrame:GetChildren()
-            itemsFrame.Size = UDim2.new(0, 120, 0, math.min(count * 16 + 4, 60))
+            itemsFrame.Size = UDim2.new(0, 120, 0, math.min(count * 14, 50))
         end
     end)
 
@@ -548,7 +579,7 @@ function Section:AddDropdown(options)
     }
 end
 
--- ─── AddKeybind ──────────────────────────────────────────
+-- ─── AddKeybind (with mouse support & modes) ──────────────
 function Section:AddKeybind(options)
     options = options or {}
     local text = options.Text or "Keybind"
@@ -562,7 +593,7 @@ function Section:AddKeybind(options)
     local row = New("Frame", self.ItemsContainer, {
         Name = "Keybind",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 18),
+        Size = UDim2.new(1, 0, 0, ITEM_HEIGHT + 4),
         BorderSizePixel = 0,
         LayoutOrder = #self.ItemsContainer:GetChildren() + 1,
         ZIndex = z,
@@ -573,11 +604,11 @@ function Section:AddKeybind(options)
         Text = text .. ":",
         TextColor3 = Division.Theme.Text,
         FontFace = FONTS.Default,
-        TextScaled = false,
-        TextSize = FONT_SIZE,
+        TextScaled = true,
+        TextSize = 14,
         TextXAlignment = Enum.TextXAlignment.Left,
-        Size = UDim2.new(0, 100, 0, 14),
-        Position = UDim2.new(0, 0, 0.5, -7),
+        Size = UDim2.new(0, 120, 0, 9),
+        Position = UDim2.new(0, 0, 0.5, -4.5),
         BorderSizePixel = 0,
         ZIndex = z,
     })
@@ -592,22 +623,22 @@ function Section:AddKeybind(options)
     })
     local modeFrame = modeDropdown.Row
     modeFrame.Parent = row
-    modeFrame.Size = UDim2.new(0, 60, 0, 16)
-    modeFrame.Position = UDim2.new(0, 110, 0.5, 0)
+    modeFrame.Size = UDim2.new(0, 60, 0, 12)
+    modeFrame.Position = UDim2.new(0, 130, 0.5, 0)
     modeFrame.AnchorPoint = Vector2.new(0, 0.5)
     modeFrame.ZIndex = z
 
-    -- Key button (transparent background)
+    -- Key button
     local keyButton = New("TextButton", row, {
         Name = "KeyButton",
         BackgroundTransparency = 1,
         Text = getKeyDisplayName(defaultKey),
         TextColor3 = Division.Theme.Text,
         FontFace = FONTS.Bold,
-        TextScaled = false,
-        TextSize = FONT_SIZE,
-        Size = UDim2.new(0, 45, 0, 14),
-        Position = UDim2.new(1, -4, 0.5, 0),
+        TextScaled = true,
+        TextSize = 14,
+        Size = UDim2.new(0, 45, 0, ITEM_HEIGHT),
+        Position = UDim2.new(1, -5, 0.5, 0),
         AnchorPoint = Vector2.new(1, 0.5),
         BorderSizePixel = 0,
         AutoButtonColor = false,
@@ -619,10 +650,10 @@ function Section:AddKeybind(options)
         local textService = game:GetService("TextService")
         local params = Instance.new("GetTextBoundsParams")
         params.Text = keyButton.Text
-        params.Size = FONT_SIZE
+        params.Size = 14
         params.Font = FONTS.Bold
         local bounds = textService:GetTextBoundsAsync(params)
-        keyButton.Size = UDim2.new(0, math.max(bounds.X + 8, 30), 0, 14)
+        keyButton.Size = UDim2.new(0, math.max(bounds.X + 10, 30), 0, ITEM_HEIGHT)
     end
     task.spawn(updateKeyButtonWidth)
 
@@ -702,7 +733,7 @@ function Section:AddButton(options)
     local row = New("TextButton", self.ItemsContainer, {
         Name = "Button",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 18),
+        Size = UDim2.new(1, 0, 0, BUTTON_HEIGHT),
         BorderSizePixel = 0,
         Text = "",
         AutoButtonColor = false,
@@ -715,8 +746,8 @@ function Section:AddButton(options)
         Text = text,
         TextColor3 = Division.Theme.Text,
         FontFace = FONTS.Default,
-        TextScaled = false,
-        TextSize = FONT_SIZE,
+        TextScaled = true,
+        TextSize = 14,
         TextXAlignment = Enum.TextXAlignment.Left,
         Size = UDim2.new(1, 0, 1, 0),
         Position = UDim2.new(0, 0, 0, 0),
@@ -741,9 +772,8 @@ function Section:AddButton(options)
     }
 end
 
--- ─── AddColorPicker ──────────────────────────────────────
+-- ─── AddColorPicker ───────────────────────────────────────
 function Section:AddColorPicker(options)
-    -- (simplified version with transparent background)
     options = options or {}
     local text = options.Text or "Color"
     local defaultColor = options.Default or Color3.fromRGB(255,255,255)
@@ -755,7 +785,7 @@ function Section:AddColorPicker(options)
     local row = New("TextButton", self.ItemsContainer, {
         Name = "ColorPicker",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 18),
+        Size = UDim2.new(1, 0, 0, 16),
         BorderSizePixel = 0,
         Text = "",
         AutoButtonColor = false,
@@ -769,11 +799,11 @@ function Section:AddColorPicker(options)
         Text = text .. ":",
         TextColor3 = Division.Theme.Text,
         FontFace = FONTS.Default,
-        TextScaled = false,
-        TextSize = FONT_SIZE,
+        TextScaled = true,
+        TextSize = 14,
         TextXAlignment = Enum.TextXAlignment.Left,
-        Size = UDim2.new(0, 200, 0, 14),
-        Position = UDim2.new(0, 0, 0.5, -7),
+        Size = UDim2.new(0, 200, 0, 9),
+        Position = UDim2.new(0, 0, 0.5, -4.5),
         BorderSizePixel = 0,
         ZIndex = z,
     })
@@ -789,38 +819,92 @@ function Section:AddColorPicker(options)
         ZIndex = z,
     })
 
-    -- Popup (we keep the full popup code)
-    -- ... (we'll include a simplified popup or keep the full one)
-    -- For brevity, we reference the previous full popup code, but we'll include it quickly.
+    -- Popup
     local popup = New("Frame", self.Tab.Window.Gui, {
         Name = "ColorPickerPopup",
         Visible = false,
         BackgroundColor3 = Division.Theme.Background,
-        BorderColor3 = Division.Theme.Outline,
+        BorderColor3 = Division.Theme.Outline1,
         Size = UDim2.new(0, 220, 0, 220),
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.new(0.5, 0, 0.5, 0),
         ZIndex = 1000000,
         BorderSizePixel = 1,
     })
-    Division.AddToTheme(popup, { BackgroundColor3 = "Background", BorderColor3 = "Outline" })
+    Division.AddToTheme(popup, { BackgroundColor3 = "Background", BorderColor3 = "Outline1" })
 
-    local closeOverlay = New("TextButton", popup, { BackgroundTransparency = 1, Size = UDim2.new(1,0,1,0), ZIndex = 0, Text = "", AutoButtonColor = false })
-    closeOverlay.MouseButton1Click:Connect(function() popup.Visible = false end)
+    local closeOverlay = New("TextButton", popup, {
+        Name = "CloseOverlay",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0),
+        ZIndex = 0,
+        Text = "",
+        AutoButtonColor = false,
+    })
+    closeOverlay.MouseButton1Click:Connect(function()
+        popup.Visible = false
+    end)
     for _, child in ipairs(popup:GetChildren()) do
         if child ~= closeOverlay then
             child.MouseButton1Click:Connect(function() end)
         end
     end
 
-    local pickerSquare = New("ImageLabel", popup, { Image = "rbxassetid://4155187649", Size = UDim2.new(0,150,0,150), Position = UDim2.new(0.02,0,0.02,0), BackgroundColor3 = Color3.new(1,1,1), ZIndex = 2 })
-    local valueSlider = New("Frame", popup, { Size = UDim2.new(0,10,0,150), Position = UDim2.new(0.75,0,0.02,0), BackgroundColor3 = Color3.new(1,1,1), ZIndex = 2 })
-    New("UIGradient", valueSlider, { Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.new(0,0,0)), ColorSequenceKeypoint.new(1, Color3.new(1,1,1)) }) })
-    local valueSliderKnob = New("Frame", valueSlider, { Name = "Knob", BackgroundColor3 = Division.Theme.Accent, Size = UDim2.new(1,0,0,3), Position = UDim2.new(0,0,1,0), BorderSizePixel = 0, ZIndex = 3 })
+    local pickerSquare = New("ImageLabel", popup, {
+        Name = "PickerSquare",
+        Image = "rbxassetid://4155187649",
+        Size = UDim2.new(0, 150, 0, 150),
+        Position = UDim2.new(0.02, 0, 0.02, 0),
+        BackgroundColor3 = Color3.new(1,1,1),
+        ZIndex = 2,
+    })
+
+    local valueSlider = New("Frame", popup, {
+        Name = "ValueSlider",
+        Size = UDim2.new(0, 10, 0, 150),
+        Position = UDim2.new(0.75, 0, 0.02, 0),
+        BackgroundColor3 = Color3.new(1,1,1),
+        ZIndex = 2,
+    })
+    New("UIGradient", valueSlider, {
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.new(0,0,0)),
+            ColorSequenceKeypoint.new(1, Color3.new(1,1,1)),
+        })
+    })
+
+    local valueSliderKnob = New("Frame", valueSlider, {
+        Name = "Knob",
+        BackgroundColor3 = Division.Theme.Accent,
+        Size = UDim2.new(1, 0, 0, 3),
+        Position = UDim2.new(0, 0, 1, 0),
+        BorderSizePixel = 0,
+        ZIndex = 3,
+    })
     Division.AddToTheme(valueSliderKnob, { BackgroundColor3 = "Accent" })
 
-    local previewBox = New("Frame", popup, { Size = UDim2.new(0,30,0,20), Position = UDim2.new(0.75,0,0.72,0), BackgroundColor3 = defaultColor, ZIndex = 2, BorderSizePixel = 0 })
-    local hexBox = New("TextBox", popup, { Size = UDim2.new(0,80,0,20), Position = UDim2.new(0.02,0,0.75,0), BackgroundColor3 = Division.Theme.Inline, TextColor3 = Division.Theme.Text, Text = Color3ToHex(defaultColor), FontFace = FONTS.Default, TextSize = 12, ZIndex = 2, BorderSizePixel = 0, ClearTextOnFocus = false })
+    local previewBox = New("Frame", popup, {
+        Name = "Preview",
+        Size = UDim2.new(0, 30, 0, 20),
+        Position = UDim2.new(0.75, 0, 0.72, 0),
+        BackgroundColor3 = defaultColor,
+        ZIndex = 2,
+        BorderSizePixel = 0,
+    })
+
+    local hexBox = New("TextBox", popup, {
+        Name = "HexBox",
+        Size = UDim2.new(0, 80, 0, 20),
+        Position = UDim2.new(0.02, 0, 0.75, 0),
+        BackgroundColor3 = Division.Theme.Inline,
+        TextColor3 = Division.Theme.Text,
+        Text = Color3ToHex(defaultColor),
+        FontFace = FONTS.Default,
+        TextSize = 12,
+        ZIndex = 2,
+        BorderSizePixel = 0,
+        ClearTextOnFocus = false,
+    })
     Division.AddToTheme(hexBox, { BackgroundColor3 = "Inline", TextColor3 = "Text" })
 
     local currentColor = defaultColor
@@ -913,16 +997,21 @@ function Section:AddColorPicker(options)
 
     row.MouseButton1Click:Connect(function()
         popup.Visible = not popup.Visible
-        if popup.Visible then popup.Position = UDim2.new(0.5, 0, 0.5, 0) end
+        if popup.Visible then
+            popup.Position = UDim2.new(0.5, 0, 0.5, 0)
+        end
     end)
 
     return {
-        Set = function(color) local nh,ns,nv = color:ToHSV(); setHSV(nh,ns,nv) end,
+        Set = function(color)
+            local newH, newS, newV = color:ToHSV()
+            setHSV(newH, newS, newV)
+        end,
         Get = function() return currentColor end,
     }
 end
 
--- ─── Textbox (for config name) ──────────────────────────
+-- ─── AddTextbox (for config name) ──────────────────────────
 function Section:AddTextbox(options)
     options = options or {}
     local placeholder = options.Placeholder or ""
@@ -959,8 +1048,8 @@ function Section:AddTextbox(options)
         PlaceholderColor3 = Division.Theme.InactiveText,
         PlaceholderText = placeholder,
         FontFace = FONTS.Default,
-        TextScaled = false,
-        TextSize = FONT_SIZE,
+        TextScaled = true,
+        TextSize = 14,
         TextXAlignment = Enum.TextXAlignment.Left,
         Size = UDim2.new(1, -10, 1, 0),
         Position = UDim2.new(0, 6, 0, 0),
@@ -975,7 +1064,9 @@ function Section:AddTextbox(options)
         value = input.Text
         if flag then
             Division.Flags[flag] = value
-            if Division.SetFlags[flag] then Division.SetFlags[flag](value) end
+            if Division.SetFlags[flag] then
+                Division.SetFlags[flag](value)
+            end
         end
         callback(value)
     end)
@@ -999,11 +1090,16 @@ function Window.new(options)
     self.Title = options.Title or "division"
     self.Center = options.Center ~= false
     self.AutoShow = options.AutoShow ~= false
+    self.TabPadding = options.TabPadding or 8
     self.MenuFadeTime = options.MenuFadeTime or 0.2
     self.Keybinds = {}
     self.WatermarkText = options.Watermark or "Division 2.72 | NA | not connected | 75"
     self.ToggleKey = options.ToggleKey or Enum.KeyCode.RightShift
-    self.Animation = { Time = 0.3, Style = "Exponential", Direction = "Out" }
+    self.Animation = {
+        Time = 0.3,
+        Style = "Exponential",
+        Direction = "Out"
+    }
 
     self.Gui = New("ScreenGui", CoreGui, {
         Name = "DivisionUI",
@@ -1012,29 +1108,31 @@ function Window.new(options)
         IgnoreGuiInset = true,
     })
 
-    -- Watermark (top‑left)
+    -- Watermark
     self.WatermarkLabel = New("TextLabel", self.Gui, {
         Name = "Watermark",
         BackgroundTransparency = 1,
         Text = self.WatermarkText,
-        TextColor3 = Color3.fromRGB(160,160,170),
+        TextColor3 = Color3.fromRGB(180, 180, 180),
         FontFace = FONTS.Default,
         TextScaled = false,
         TextSize = 11,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextYAlignment = Enum.TextYAlignment.Top,
-        Size = UDim2.new(0, 350, 0, 14),
+        Size = UDim2.new(0, 300, 0, 14),
         Position = UDim2.new(0, 10, 0, 10),
         AnchorPoint = Vector2.new(0, 0),
         ZIndex = 1000000,
     })
+    Division.AddToTheme(self.WatermarkLabel, { TextColor3 = function() return Color3.fromRGB(180, 180, 180) end })
 
+    -- Main window
     self.MainFrame = New("Frame", self.Gui, {
         Name = "Main",
         BackgroundTransparency = 1,
         Size = WINDOW_SIZE,
         AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.new(0.5, 0, 0.5, 0),
+        Position = UDim2.new(0.5, 0, 0.55, 0),
         BorderSizePixel = 0,
     })
 
@@ -1061,8 +1159,8 @@ function Window.new(options)
         BackgroundTransparency = 1,
     })
     Division.AddToTheme(self.TopBar, { BackgroundColor3 = "Background" })
-    New("UIStroke", self.TopBar, { Color = Division.Theme.Outline })
-    Division.AddToTheme(self.TopBar:FindFirstChildOfClass("UIStroke"), { Color = "Outline" })
+    New("UIStroke", self.TopBar, { Color = Division.Theme.Outline1 })
+    Division.AddToTheme(self.TopBar:FindFirstChildOfClass("UIStroke"), { Color = "Outline1" })
 
     self.TitleLabel = New("TextLabel", self.TopBar, {
         Name = "Label",
@@ -1070,7 +1168,7 @@ function Window.new(options)
         Text = self.Title,
         TextColor3 = Division.Theme.Text,
         FontFace = FONTS.Bold,
-        TextScaled = false,
+        TextScaled = true,
         TextSize = 14,
         TextYAlignment = Enum.TextYAlignment.Top,
         Size = UDim2.new(0.9, 0, 0.8, 0),
@@ -1110,13 +1208,17 @@ function Window.new(options)
     self.Tabs = {}
     self.ActiveTab = nil
 
-    -- Drag
-    local dragData = { active = false }
+    -- Smooth drag
+    local dragData = { active = false, startMouse = nil, startPos = nil, connection = nil }
+
     local function updateDrag()
         if not dragData.active then return end
         local mousePos = UserInputService:GetMouseLocation()
         local delta = mousePos - dragData.startMouse
-        self.MainFrame.Position = UDim2.new(0.5, dragData.startPos.X.Offset + delta.X, 0.5, dragData.startPos.Y.Offset + delta.Y)
+        self.MainFrame.Position = UDim2.new(
+            0.5, dragData.startPos.X.Offset + delta.X,
+            0.55, dragData.startPos.Y.Offset + delta.Y
+        )
     end
 
     self.TopBar.InputBegan:Connect(function(input)
@@ -1124,17 +1226,31 @@ function Window.new(options)
             dragData.active = true
             dragData.startMouse = UserInputService:GetMouseLocation()
             dragData.startPos = self.MainFrame.Position
+            if dragData.connection then dragData.connection:Disconnect() end
             dragData.connection = RunService.Heartbeat:Connect(updateDrag)
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     dragData.active = false
-                    dragData.connection:Disconnect()
+                    if dragData.connection then
+                        dragData.connection:Disconnect()
+                        dragData.connection = nil
+                    end
                 end
             end)
         end
     end)
 
-    -- Keybinds
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragData.active = false
+            if dragData.connection then
+                dragData.connection:Disconnect()
+                dragData.connection = nil
+            end
+        end
+    end)
+
+    -- Keybind listener
     self.KeybindConnection = UserInputService.InputBegan:Connect(function(input, processed)
         if processed then return end
         for _, binding in ipairs(self.Keybinds) do
@@ -1143,7 +1259,12 @@ function Window.new(options)
             local callback = binding.callback
             local inputType, keyCode = parseKey(key)
             if inputType then
-                local match = (inputType == Enum.UserInputType.Keyboard and input.KeyCode == keyCode) or (input.UserInputType == inputType)
+                local match = false
+                if inputType == Enum.UserInputType.Keyboard then
+                    match = (input.KeyCode == keyCode)
+                else
+                    match = (input.UserInputType == inputType)
+                end
                 if match then
                     if mode == "Toggle" then
                         binding.active = not binding.active
@@ -1165,7 +1286,12 @@ function Window.new(options)
             if binding.mode == "Hold" then
                 local inputType, keyCode = parseKey(binding.key)
                 if inputType then
-                    local match = (inputType == Enum.UserInputType.Keyboard and input.KeyCode == keyCode) or (input.UserInputType == inputType)
+                    local match = false
+                    if inputType == Enum.UserInputType.Keyboard then
+                        match = (input.KeyCode == keyCode)
+                    else
+                        match = (input.UserInputType == inputType)
+                    end
                     if match then
                         binding.active = false
                         binding.callback(false)
@@ -1175,6 +1301,7 @@ function Window.new(options)
         end
     end)
 
+    -- Built‑in toggle (RightShift)
     if self.ToggleKey then
         self.ToggleConnection = UserInputService.InputBegan:Connect(function(input, processed)
             if processed then return end
@@ -1185,76 +1312,156 @@ function Window.new(options)
     end
 
     if self.AutoShow then self:FadeIn() end
+
     return self
 end
 
--- ─── Settings tab ──────────────────────────────────────────
+-- ─── Full Settings tab ──────────────────────────────────────
 function Window:CreateFullSettingsTab()
     local settingsTab = self:CreateTab("Settings", false)
-    local configSection = settingsTab:CreateSection("Configs", "Left")
-    local configDropdown = configSection:AddDropdown({ Text = "", Values = Division.GetConfigsList(), Default = "" })
-    configSection:AddButton({ Text = "Create", Callback = function()
-        local name = Division.Flags["config_name"]
-        if name and name ~= "" then
-            writefile(ConfigsFolder .. name .. ".json", Division.GetConfig())
-            configDropdown:Set(Division.GetConfigsList())
-        end
-    end })
-    configSection:AddButton({ Text = "Delete", Callback = function()
-        local sel = configDropdown:Get()
-        if sel and sel ~= "" and isfile(ConfigsFolder .. sel .. ".json") then
-            delfile(ConfigsFolder .. sel .. ".json")
-            configDropdown:Set(Division.GetConfigsList())
-        end
-    end })
-    configSection:AddButton({ Text = "Load", Callback = function()
-        local sel = configDropdown:Get()
-        if sel and sel ~= "" and isfile(ConfigsFolder .. sel .. ".json") then
-            Division.LoadConfig(readfile(ConfigsFolder .. sel .. ".json"))
-        end
-    end })
-    configSection:AddButton({ Text = "Save", Callback = function()
-        local sel = configDropdown:Get()
-        if sel and sel ~= "" then writefile(ConfigsFolder .. sel .. ".json", Division.GetConfig()) end
-    end })
-    configSection:AddButton({ Text = "Refresh", Callback = function() configDropdown:Set(Division.GetConfigsList()) end })
-    configSection:AddTextbox({ Placeholder = "config name", Flag = "config_name" })
 
+    -- Configs section (left)
+    local configSection = settingsTab:CreateSection("Configs", "Left")
+    local configDropdown = configSection:AddDropdown({
+        Text = "",
+        Values = Division.GetConfigsList(),
+        Default = "",
+    })
+    configSection:AddButton({
+        Text = "Create",
+        Callback = function()
+            local name = Division.Flags["config_name"]
+            if name and name ~= "" then
+                writefile(ConfigsFolder .. name .. ".json", Division.GetConfig())
+                configDropdown:Set(Division.GetConfigsList())
+            end
+        end
+    })
+    configSection:AddButton({
+        Text = "Delete",
+        Callback = function()
+            local selected = configDropdown:Get()
+            if selected and selected ~= "" then
+                if isfile(ConfigsFolder .. selected .. ".json") then
+                    delfile(ConfigsFolder .. selected .. ".json")
+                    configDropdown:Set(Division.GetConfigsList())
+                end
+            end
+        end
+    })
+    configSection:AddButton({
+        Text = "Load",
+        Callback = function()
+            local selected = configDropdown:Get()
+            if selected and selected ~= "" then
+                if isfile(ConfigsFolder .. selected .. ".json") then
+                    local json = readfile(ConfigsFolder .. selected .. ".json")
+                    Division.LoadConfig(json)
+                end
+            end
+        end
+    })
+    configSection:AddButton({
+        Text = "Save",
+        Callback = function()
+            local selected = configDropdown:Get()
+            if selected and selected ~= "" then
+                writefile(ConfigsFolder .. selected .. ".json", Division.GetConfig())
+            end
+        end
+    })
+    configSection:AddButton({
+        Text = "Refresh",
+        Callback = function()
+            configDropdown:Set(Division.GetConfigsList())
+        end
+    })
+    -- Config name textbox
+    configSection:AddTextbox({
+        Placeholder = "config name",
+        Flag = "config_name",
+    })
+
+    -- Theming section (right)
     local themingSection = settingsTab:CreateSection("Theming", "Right")
     for name, color in pairs(Division.Theme) do
         themingSection:AddLabel(name):Colorpicker({
             Flag = "theme_" .. name,
             Default = color,
-            Callback = function(newColor) Division.ChangeTheme(name, newColor) end
+            Callback = function(newColor)
+                Division.ChangeTheme(name, newColor)
+            end
         })
     end
 
+    -- Other section (right, below theming)
     local otherSection = settingsTab:CreateSection("Other", "Right")
-    otherSection:AddButton({ Text = "Unload", Callback = function() self:Destroy(); _G.DivisionUI_Window = nil end })
-    otherSection:AddKeybind({ Text = "UI Bind", Default = "RightShift", Mode = "Toggle", Callback = function(s) if s then self:ToggleVisibility() end end })
-    otherSection:AddDropdown({ Text = "Animation Style", Values = {"Linear","Quad","Quart","Back","Bounce","Circular","Cubic","Elastic","Exponential","Sine","Quint"}, Default = "Exponential", Callback = function(v) self.Animation.Style = v end })
-    otherSection:AddDropdown({ Text = "Animation Direction", Values = {"In","Out","InOut"}, Default = "Out", Callback = function(v) self.Animation.Direction = v end })
-    otherSection:AddSlider({ Text = "Animation Time", Min = 0.05, Max = 1, Default = 0.3, Rounding = 0.01, Callback = function(v) self.Animation.Time = v end })
+    otherSection:AddButton({
+        Text = "Unload",
+        Callback = function()
+            self:Destroy()
+            _G.DivisionUI_Window = nil
+        end
+    })
+    otherSection:AddKeybind({
+        Text = "UI Bind",
+        Default = "RightShift",
+        Mode = "Toggle",
+        Callback = function(state)
+            if state then self:ToggleVisibility() end
+        end
+    })
+    otherSection:AddDropdown({
+        Text = "Animation Style",
+        Values = {"Linear", "Quad", "Quart", "Back", "Bounce", "Circular", "Cubic", "Elastic", "Exponential", "Sine", "Quint"},
+        Default = "Exponential",
+        Callback = function(v)
+            self.Animation.Style = v
+        end
+    })
+    otherSection:AddDropdown({
+        Text = "Animation Direction",
+        Values = {"In", "Out", "InOut"},
+        Default = "Out",
+        Callback = function(v)
+            self.Animation.Direction = v
+        end
+    })
+    otherSection:AddSlider({
+        Text = "Animation Time",
+        Min = 0.05,
+        Max = 1,
+        Default = 0.3,
+        Rounding = 0.01,
+        Callback = function(v)
+            self.Animation.Time = v
+        end
+    })
+
     return settingsTab
 end
 
--- ─── Fade ────────────────────────────────────────────────
+-- ─── Fade methods ────────────────────────────────────────
 function Window:FadeIn()
     if not self.Gui.Enabled then return end
-    local tween = TweenInfo.new(self.MenuFadeTime, Enum.EasingStyle.Linear)
-    local bgT = TweenService:Create(self.Background, tween, { BackgroundTransparency = 0 })
-    local topT = TweenService:Create(self.TopBar, tween, { BackgroundTransparency = 0 })
-    local titleT = TweenService:Create(self.TitleLabel, tween, { TextTransparency = 0 })
-    bgT:Play(); topT:Play(); titleT:Play()
+    local tweenInfo = TweenInfo.new(self.MenuFadeTime, Enum.EasingStyle.Linear)
+    local bgTween = TweenService:Create(self.Background, tweenInfo, { BackgroundTransparency = 0 })
+    local topTween = TweenService:Create(self.TopBar, tweenInfo, { BackgroundTransparency = 0 })
+    local titleTween = TweenService:Create(self.TitleLabel, tweenInfo, { TextTransparency = 0 })
+    bgTween:Play()
+    topTween:Play()
+    titleTween:Play()
 end
 
 function Window:FadeOut()
     if not self.Gui.Enabled then return end
-    local tween = TweenInfo.new(self.MenuFadeTime, Enum.EasingStyle.Linear)
-    local bgT = TweenService:Create(self.Background, tween, { BackgroundTransparency = 1 })
-    local topT = TweenService:Create(self.TopBar, tween, { BackgroundTransparency = 1 })
-    local titleT = TweenService:Create(self.TitleLabel, tween, { TextTransparency = 1 })
-    bgT:Play(); topT:Play(); titleT:Play()
+    local tweenInfo = TweenInfo.new(self.MenuFadeTime, Enum.EasingStyle.Linear)
+    local bgTween = TweenService:Create(self.Background, tweenInfo, { BackgroundTransparency = 1 })
+    local topTween = TweenService:Create(self.TopBar, tweenInfo, { BackgroundTransparency = 1 })
+    local titleTween = TweenService:Create(self.TitleLabel, tweenInfo, { TextTransparency = 1 })
+    bgTween:Play()
+    topTween:Play()
+    titleTween:Play()
     task.wait(self.MenuFadeTime)
     self.Gui.Enabled = false
 end
@@ -1263,10 +1470,26 @@ function Window:ToggleVisibility()
     if self.Gui.Enabled then self:FadeOut() else self.Gui.Enabled = true; self:FadeIn() end
 end
 
-function Window:Show() self.Gui.Enabled = true; self:FadeIn() end
-function Window:Hide() self:FadeOut() end
-function Window:SetWatermark(text) self.WatermarkText = text; self.WatermarkLabel.Text = text end
-function Window:Destroy() if self.KeybindConnection then self.KeybindConnection:Disconnect() end if self.KeybindEndConnection then self.KeybindEndConnection:Disconnect() end if self.ToggleConnection then self.ToggleConnection:Disconnect() end self.Gui:Destroy() end
+function Window:Show()
+    self.Gui.Enabled = true
+    self:FadeIn()
+end
+
+function Window:Hide()
+    self:FadeOut()
+end
+
+function Window:SetWatermark(text)
+    self.WatermarkText = text
+    self.WatermarkLabel.Text = text
+end
+
+function Window:Destroy()
+    if self.KeybindConnection then self.KeybindConnection:Disconnect() end
+    if self.KeybindEndConnection then self.KeybindEndConnection:Disconnect() end
+    if self.ToggleConnection then self.ToggleConnection:Disconnect() end
+    self.Gui:Destroy()
+end
 
 -- ─── CreateTab ──────────────────────────────────────────
 function Window:CreateTab(name, isDefault)
@@ -1276,24 +1499,26 @@ function Window:CreateTab(name, isDefault)
         TextColor3 = Division.Theme.Text,
         BackgroundColor3 = Division.Theme.Background,
         FontFace = FONTS.Bold,
-        TextScaled = false,
-        TextSize = FONT_SIZE,
-        Size = UDim2.new(0, 0, 1, 0),
+        TextScaled = true,
+        TextSize = 14,
+        Size = UDim2.new(0, 118, 1, 0),
         BorderSizePixel = 0,
         AutoButtonColor = false,
         BackgroundTransparency = 1,
         ZIndex = 1000000,
     })
     Division.AddToTheme(button, { TextColor3 = "Text", BackgroundColor3 = "Background" })
-    New("UIStroke", button, { Color = Division.Theme.Outline })
-    Division.AddToTheme(button:FindFirstChildOfClass("UIStroke"), { Color = "Outline" })
+    New("UIStroke", button, { Color = Division.Theme.Outline1 })
+    Division.AddToTheme(button:FindFirstChildOfClass("UIStroke"), { Color = "Outline1" })
 
     task.spawn(function()
-        local ts = game:GetService("TextService")
-        local p = Instance.new("GetTextBoundsParams")
-        p.Text = name; p.Size = FONT_SIZE; p.Font = FONTS.Bold
-        local b = ts:GetTextBoundsAsync(p)
-        button.Size = UDim2.new(0, b.X + 10, 1, 0)
+        local textService = game:GetService("TextService")
+        local params = Instance.new("GetTextBoundsParams")
+        params.Text = name
+        params.Size = 14
+        params.Font = FONTS.Bold
+        local bounds = textService:GetTextBoundsAsync(params)
+        button.Size = UDim2.new(0, bounds.X + 5, 1, 0)
     end)
 
     local content = New("Frame", self.ContentContainer, {
@@ -1310,7 +1535,11 @@ function Window:CreateTab(name, isDefault)
         Size = UDim2.new(0.5, -2, 1, 0),
         ZIndex = 1000000,
     })
-    New("UIListLayout", leftPanel, { HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder })
+    New("UIListLayout", leftPanel, {
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+        Padding = UDim.new(0, 2),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    })
 
     local rightPanel = New("Frame", content, {
         Name = "Right",
@@ -1319,7 +1548,11 @@ function Window:CreateTab(name, isDefault)
         Position = UDim2.new(0.5, 0, 0, 0),
         ZIndex = 1000000,
     })
-    New("UIListLayout", rightPanel, { HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder })
+    New("UIListLayout", rightPanel, {
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+        Padding = UDim.new(0, 10),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    })
 
     local tab = {
         Name = name,
@@ -1327,10 +1560,17 @@ function Window:CreateTab(name, isDefault)
         Content = content,
         LeftPanel = leftPanel,
         RightPanel = rightPanel,
+        Sections = {},
         Window = self,
-        CreateSection = function(self, name, side) return Section.new(self, name, side) end
+        CreateSection = function(self, name, side)
+            return Section.new(self, name, side)
+        end
     }
-    button.MouseButton1Click:Connect(function() self:SelectTab(tab) end)
+
+    button.MouseButton1Click:Connect(function()
+        self:SelectTab(tab)
+    end)
+
     table.insert(self.Tabs, tab)
     if isDefault then self:SelectTab(tab) end
     return tab
@@ -1348,7 +1588,7 @@ function Window:SelectTab(tab)
 end
 
 -- ─────────────────────────────────────────────────────────────
---  Library entry
+--  Library entry (auto‑unload)
 -- ─────────────────────────────────────────────────────────────
 function Division:CreateWindow(options)
     if _G.DivisionUI_Window then
